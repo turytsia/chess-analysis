@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { GraduationCap, Play } from 'lucide-react';
 import { useState } from 'react';
 
+import { RelativeDate } from '../../components/RelativeDate';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -22,7 +23,7 @@ import {
 } from '../../services/leitner';
 import type { Opening, OpeningBook } from '../../services/openings';
 import { useTrainerTranslation } from '../../translations/hooks';
-import { formatDate, formatMoveLine } from '../../utilities/format';
+import { formatMoveLine } from '../../utilities/format';
 
 const NEW_LINES_PER_SESSION = 5;
 
@@ -171,7 +172,9 @@ const LineRow: React.FC<LineRowProps> = ({
       </TableCell>
       <TableCell className='text-muted-foreground'>
         {progress && isDue(progress, now) && t('DueNow')}
-        {progress && !isDue(progress, now) && formatDate(progress.dueAt)}
+        {progress && !isDue(progress, now) && (
+          <RelativeDate timestamp={progress.dueAt} />
+        )}
       </TableCell>
       <TableCell className='text-right'>
         <Button variant='ghost' size='sm' onClick={onPractice}>

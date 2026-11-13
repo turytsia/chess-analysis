@@ -27,7 +27,7 @@ export interface OpeningBook {
   byEpd: Map<string, Opening>;
 }
 
-export interface OpeningMatch {
+interface OpeningMatch {
   opening: Opening | undefined;
   bookPlies: number;
 }

@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "lint": "eslint --cache --cache-strategy content --max-warnings 0 src --fix",
     "lint:check": "eslint --cache --cache-strategy content --max-warnings 0 src",
-    "lint:unused": "knip",
+    "lint:unused": "knip && node scripts/checkExports.mjs",
     "format:code": "prettier --parser typescript \"*.{ts,mjs,cjs}\" \"scripts/**/*.mjs\" \"src/**/*.{ts,tsx}\"",
     "format:check": "pnpm format:code --list-different",
     "format": "pnpm format:code --write",

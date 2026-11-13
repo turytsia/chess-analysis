@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildGameReport, isCriticalLabel, MoveLabel } from './classify';
+import {
+  assessMoves,
+  buildGameReport,
+  isCriticalLabel,
+  MoveLabel,
+} from './classify';
 import type { PositionEval } from './evaluation';
 import { parsePgn } from './pgn';
 
@@ -76,6 +81,30 @@ describe('classify', () => {
     };
 
     expect(labelsOf([before, evalOf(0)])[0]).toBe(MoveLabel.Great);
+  });
+
+  it('should not label taking a piece that was just hung as Great', () => {
+    const { moves } = parsePgn('1. e4 e5 2. Nf3 Ba3 3. bxa3 *');
+    const beforeCapture: PositionEval = {
+      lines: [
+        { cp: 400, depth: 16, pv: ['b2a3'] },
+        { cp: 0, depth: 16, pv: ['b1a3'] },
+      ],
+    };
+    const report = buildGameReport({
+      moves,
+      evals: [
+        evalOf(0),
+        evalOf(0),
+        evalOf(0),
+        evalOf(0),
+        beforeCapture,
+        evalOf(400),
+      ],
+      bookPlies: 0,
+    });
+
+    expect(report.assessments[4]?.label).toBe(MoveLabel.Best);
   });
 
   it('should not label a forced reply to a check as Great', () => {
@@ -183,6 +212,21 @@ describe('classify', () => {
     expect(
       report.counts.find(({ label }) => label === MoveLabel.Blunder)?.count
     ).toEqual({ white: 1, black: 0 });
+  });
+
+  it('should assess the moves of a line whose positions are only partly evaluated', () => {
+    const assessments = assessMoves({
+      moves: OPENING_MOVES,
+      evals: [undefined, evalOf(0), evalOf(-400), undefined, evalOf(0)],
+      bookPlies: 0,
+    });
+
+    expect(assessments.map((assessment) => assessment?.label)).toEqual([
+      undefined,
+      MoveLabel.Excellent,
+      undefined,
+      undefined,
+    ]);
   });
 
   it('should treat blunders, mistakes and misses as critical', () => {

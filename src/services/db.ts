@@ -49,12 +49,6 @@ export interface StoredAnalysis {
   updatedAt: number;
 }
 
-interface StoredNote {
-  gameId: string;
-  text: string;
-  updatedAt: number;
-}
-
 interface StoredArchive {
   id: string;
   fetchedAt: number;
@@ -89,11 +83,10 @@ export async function setGameAccuracy(
 export async function deleteGame(id: string): Promise<void> {
   await DATABASE.transaction(
     'rw',
-    [gamesTable(), analysesTable(), notesTable()],
+    [gamesTable(), analysesTable()],
     async () => {
       await gamesTable().delete(id);
       await analysesTable().where('gameId').equals(id).delete();
-      await notesTable().delete(id);
     }
   );
 }
@@ -104,14 +97,6 @@ export function listAnalyses(gameId: string): Promise<Array<StoredAnalysis>> {
 
 export async function saveAnalysis(analysis: StoredAnalysis): Promise<void> {
   await analysesTable().put(analysis);
-}
-
-export async function getNoteText(gameId: string): Promise<string> {
-  return (await notesTable().get(gameId))?.text ?? '';
-}
-
-export async function saveNote(gameId: string, text: string): Promise<void> {
-  await notesTable().put({ gameId, text, updatedAt: Date.now() });
 }
 
 export async function listFetchedArchives(): Promise<Set<string>> {
@@ -139,6 +124,7 @@ function createDatabase(): Dexie {
     archives: 'id',
     lineProgress: 'lineId',
   });
+  instance.version(2).stores({ notes: null });
   return instance;
 }
 
@@ -148,10 +134,6 @@ function gamesTable(): EntityTable<StoredGame, 'id'> {
 
 function analysesTable(): Table<StoredAnalysis, [string, number, number]> {
   return DATABASE.table('analyses');
-}
-
-function notesTable(): EntityTable<StoredNote, 'gameId'> {
-  return DATABASE.table('notes');
 }
 
 function archivesTable(): EntityTable<StoredArchive, 'id'> {

@@ -32,14 +32,14 @@ export interface ImportSummary {
   failed: number;
 }
 
-export interface ChesscomImportParams {
+interface ChesscomImportParams {
   username: string;
   monthLimit: number | undefined;
   signal: AbortSignal;
   onProgress: (progress: ImportProgress) => void;
 }
 
-export interface PgnImportParams {
+interface PgnImportParams {
   text: string;
   username: string;
   fallbackColor: PlayerColor;

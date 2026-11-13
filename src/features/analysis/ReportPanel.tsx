@@ -11,8 +11,8 @@ import type { StoredGame } from '../../services/db';
 import { GamePhase } from '../../services/material';
 import { useAnalysisTranslation } from '../../translations/hooks';
 import { formatPercent } from '../../utilities/format';
-import { MoveLabelIcon } from './MoveLabelIcon';
-import { useLocalizeMoveLabel } from './useLocalizeMoveLabel';
+import { MoveLabelIcon } from '../../components/MoveLabelIcon';
+import { useLocalizeMoveLabel } from '../../utilities/useLocalizeMoveLabel';
 
 const NO_VALUE = '–';
 

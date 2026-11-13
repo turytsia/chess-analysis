@@ -39,7 +39,6 @@ describe('buildAnnotatedPgn', () => {
       moves: GAME.moves,
       evals: [],
       assessments: [],
-      notes: '',
     });
 
     expect(pgn.split('\n').slice(0, 6)).toEqual([
@@ -58,7 +57,6 @@ describe('buildAnnotatedPgn', () => {
       moves: GAME.moves,
       evals: [],
       assessments: [],
-      notes: '',
     });
 
     expect(pgn.split('\n')[0]).toBe('[White "Ann \'The Rook\' Lee"]');
@@ -71,13 +69,12 @@ describe('buildAnnotatedPgn', () => {
       moves: GAME.moves,
       evals: [],
       assessments: [],
-      notes: '',
     });
 
     expect(pgn.trimEnd().split('\n').at(-1)).toBe('1. e4 c6 2. d4 d5 1-0');
   });
 
-  it('should add annotation glyphs, evaluations and the notes', () => {
+  it('should add annotation glyphs and evaluations', () => {
     const pgn = buildAnnotatedPgn({
       headers: GAME.headers,
       moves: GAME.moves,
@@ -93,11 +90,10 @@ describe('buildAnnotatedPgn', () => {
         assessmentOf(MoveLabel.Blunder),
         undefined,
       ],
-      notes: 'Watch the {centre}.\nCastle early.',
     });
 
     expect(pgn.split('\n\n')[1].replace(/\n/g, ' ').trim()).toBe(
-      '{ Watch the centre. Castle early. } 1. e4 { [%eval 0.35] } 1... c6!! { [%eval -1.40] } 2. d4?? { [%eval #-3] } 2... d5 1-0'
+      '1. e4 { [%eval 0.35] } 1... c6!! { [%eval -1.40] } 2. d4?? { [%eval #-3] } 2... d5 1-0'
     );
   });
 
@@ -107,7 +103,6 @@ describe('buildAnnotatedPgn', () => {
       moves: GAME.moves,
       evals: [evalOf(20), evalOf(35), evalOf(-140), evalOf(0), evalOf(10)],
       assessments: GAME.moves.map(() => assessmentOf(MoveLabel.Mistake)),
-      notes: 'A note',
     });
 
     expect(parsePgn(pgn).moves.map(({ san }) => san)).toEqual([
@@ -127,7 +122,6 @@ describe('buildAnnotatedPgn', () => {
       moves: long.moves,
       evals: [],
       assessments: [],
-      notes: '',
     });
 
     expect(pgn.split('\n').every((line) => line.length <= 80)).toBe(true);

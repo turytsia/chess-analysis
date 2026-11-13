@@ -3,8 +3,8 @@ import type { GameMove } from '../../services/pgn';
 import { useAnalysisTranslation } from '../../translations/hooks';
 import { cn } from '../../utilities/cn';
 import { formatMoveNumber, formatPercent } from '../../utilities/format';
-import { MoveLabelIcon } from './MoveLabelIcon';
-import { useLocalizeMoveLabel } from './useLocalizeMoveLabel';
+import { MoveLabelIcon } from '../../components/MoveLabelIcon';
+import { useLocalizeMoveLabel } from '../../utilities/useLocalizeMoveLabel';
 
 interface CriticalMomentsProps {
   moves: Array<GameMove>;

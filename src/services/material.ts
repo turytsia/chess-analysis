@@ -58,15 +58,11 @@ export function getSacrificedMaterial(move: GameMove): number {
   return offered - captured - promoted;
 }
 
-export function isRecapture(
+export function capturesLastMovedPiece(
   move: GameMove,
   previous: GameMove | undefined
 ): boolean {
-  return (
-    move.captured !== undefined &&
-    previous?.captured !== undefined &&
-    previous.to === move.to
-  );
+  return move.captured !== undefined && previous?.to === move.to;
 }
 
 export function getMovePhases(moves: Array<GameMove>): Array<GamePhase> {

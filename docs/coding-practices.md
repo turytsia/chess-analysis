@@ -41,8 +41,9 @@ function isRecent(game: StoredGame, filters: GameFilters): boolean {
 #### Export only what is imported somewhere
 
 A declaration is exported only when another module imports it. If the last import goes away, remove
-the `export` too. `pnpm lint:unused` reports exports, files and dependencies that nothing uses, and
-it runs in CI.
+the `export` too. This includes types that only appear in the signature of an exported function:
+they stay private until another file needs to name them. `pnpm lint:unused` reports exports that
+no other file references, along with unused files and dependencies, and it runs in CI.
 
 #### Comment only complicated functionality
 
@@ -86,7 +87,7 @@ There is no backend. The site must work from a sub-folder with no control over r
 
 #### Store data in the browser only
 
-- Games, analyses, notes, fetched archives and trainer progress live in IndexedDB, behind the
+- Games, analyses, fetched archives and trainer progress live in IndexedDB, behind the
   functions exported by `src/services/db.ts`. No other module touches the database directly.
 - Settings, including the chess.com username the user typed in, live in `localStorage` through
   `src/stores/settingsStore.ts`. Games are only loaded after the user provides that input.
@@ -105,6 +106,10 @@ radii, Geist Sans and Geist Mono, restrained use of color.
   name. Text stays in the foreground or muted color. Every color must work in light and dark mode.
 - Charts follow the same rules: one axis, thin marks, solid hairline grid, a tooltip on hover, and
   every value also reachable without the tooltip.
+- A page that shows a chessboard fits the window on large screens and never scrolls as a whole.
+  Wrap it in `BoardPage`, lay it out with `BoardLayout`, and let long content scroll inside its
+  own card. On small screens the same page stacks and scrolls normally.
+- Show dates with `RelativeDate` ("Today", "Yesterday", "3 days ago"), not as raw dates.
 
 ## General
 
@@ -637,15 +642,15 @@ const text = t('BestMove');
 Don't:
 ```typescript jsx
 <>
-  {t('BestWas')} <strong>{move}</strong>
+  {t('ExploringAfter')} <strong>{move}</strong>
 </>
 ```
 Do:
 ```json
-{ "BestMoveWas": "Best was <move>{{move}}</move>" }
+{ "ExploringAfterMove": "Exploring after <move>{{move}}</move>" }
 ```
 ```typescript jsx
-<Trans t={t} i18nKey='BestMoveWas' values={{ move }} components={{ move: <strong /> }} />
+<Trans t={t} i18nKey='ExploringAfterMove' values={{ move }} components={{ move: <strong /> }} />
 ```
 
 ## Unit tests

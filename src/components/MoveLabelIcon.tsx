@@ -7,8 +7,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { MoveLabel } from '../../services/classify';
-import { cn } from '../../utilities/cn';
+import { MoveLabel } from '../services/classify';
+import { cn } from '../utilities/cn';
 
 const LABEL_APPEARANCE: Record<MoveLabel, LabelAppearance> = {
   [MoveLabel.Brilliant]: {

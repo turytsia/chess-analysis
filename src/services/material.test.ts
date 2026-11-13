@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  capturesLastMovedPiece,
   GamePhase,
   getMovePhases,
   getSacrificedMaterial,
-  isRecapture,
 } from './material';
 import { parsePgn } from './pgn';
 
@@ -49,17 +49,29 @@ describe('material', () => {
     });
   });
 
-  describe('isRecapture', () => {
+  describe('capturesLastMovedPiece', () => {
     it('should be true when a piece is taken back on the same square', () => {
       const { moves } = parsePgn('1. e4 d5 2. exd5 Qxd5 *');
 
-      expect(isRecapture(moves[3], moves[2])).toBe(true);
+      expect(capturesLastMovedPiece(moves[3], moves[2])).toBe(true);
     });
 
-    it('should be false for a capture that does not answer a capture', () => {
-      const { moves } = parsePgn('1. e4 d5 2. exd5 Qxd5 *');
+    it('should be true when a piece that was just put en prise is taken', () => {
+      const { moves } = parsePgn('1. e4 e5 2. Nf3 Ba3 3. bxa3 *');
 
-      expect(isRecapture(moves[2], moves[1])).toBe(false);
+      expect(capturesLastMovedPiece(moves[4], moves[3])).toBe(true);
+    });
+
+    it('should be false for a capture somewhere else', () => {
+      const { moves } = parsePgn('1. e4 d5 2. Nf3 dxe4 *');
+
+      expect(capturesLastMovedPiece(moves[3], moves[2])).toBe(false);
+    });
+
+    it('should be false for a move that takes nothing', () => {
+      const { moves } = parsePgn('1. e4 d5 *');
+
+      expect(capturesLastMovedPiece(moves[1], moves[0])).toBe(false);
     });
   });
 

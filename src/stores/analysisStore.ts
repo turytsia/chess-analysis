@@ -11,6 +11,7 @@ import {
 import { createEngine, type Engine } from '../services/engine';
 import type { PositionEval } from '../services/evaluation';
 import { getPositions, type ParsedGame } from '../services/pgn';
+import { useEngineStatsStore } from './engineStatsStore';
 import { useSettingsStore } from './settingsStore';
 
 type AnalysisOutcome = 'completed' | 'cancelled' | 'failed' | 'busy';
@@ -74,6 +75,8 @@ export const useAnalysisStore = create<AnalysisState>()((set, get) => {
           signal: controller.signal,
           onProgress: (progress) =>
             set(({ run }) => ({ run: run && { ...run, evals: progress } })),
+          onSearched: (search) =>
+            useEngineStatsStore.getState().recordSearch(search, depth, multiPv),
         });
 
         const isComplete = evals.length === fens.length;

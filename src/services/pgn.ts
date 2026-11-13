@@ -1,9 +1,10 @@
-import { Chess, type PieceSymbol } from 'chess.js';
+import { Chess, type Move, type PieceSymbol } from 'chess.js';
 
 import type { PlayerColor } from './evaluation';
 
 const GAME_BOUNDARY = /\r?\n\s*\r?\n(?=\[)/;
 const HEADER_LINE = /^\s*\[/;
+const DEFAULT_PROMOTION = 'q';
 
 export interface GameMove {
   ply: number;
@@ -29,21 +30,9 @@ export function parsePgn(pgn: string): ParsedGame {
   const chess = new Chess();
   chess.loadPgn(pgn.trim());
 
-  const moves = chess.history({ verbose: true }).map(
-    (move, index): GameMove => ({
-      ply: index + 1,
-      color: move.color === 'w' ? 'white' : 'black',
-      san: move.san,
-      uci: move.lan,
-      from: move.from,
-      to: move.to,
-      piece: move.piece,
-      captured: move.captured,
-      promotion: move.promotion,
-      fenBefore: move.before,
-      fenAfter: move.after,
-    })
-  );
+  const moves = chess
+    .history({ verbose: true })
+    .map((move, index) => toGameMove(move, index + 1));
 
   return {
     headers: chess.getHeaders(),
@@ -73,6 +62,29 @@ export function splitPgn(text: string): Array<string> {
     .filter((game) => game.trim().length > 0);
 }
 
+export function createMove(
+  fen: string,
+  from: string,
+  to: string,
+  ply: number
+): GameMove | undefined {
+  try {
+    const move = new Chess(fen).move({
+      from,
+      to,
+      promotion: DEFAULT_PROMOTION,
+    });
+    return toGameMove(move, ply);
+  } catch {
+    return undefined;
+  }
+}
+
+export function playLine(sans: Array<string>): Array<GameMove> {
+  const chess = new Chess();
+  return sans.map((san, index) => toGameMove(chess.move(san), index + 1));
+}
+
 export function getPositions(game: ParsedGame): Array<string> {
   return [game.startFen, ...game.moves.map((move) => move.fenAfter)];
 }
@@ -81,4 +93,20 @@ function hasMovetext(chunk: string): boolean {
   return chunk
     .split(/\r?\n/)
     .some((line) => line.trim().length > 0 && !HEADER_LINE.test(line));
+}
+
+function toGameMove(move: Move, ply: number): GameMove {
+  return {
+    ply,
+    color: move.color === 'w' ? 'white' : 'black',
+    san: move.san,
+    uci: move.lan,
+    from: move.from,
+    to: move.to,
+    piece: move.piece,
+    captured: move.captured,
+    promotion: move.promotion,
+    fenBefore: move.before,
+    fenAfter: move.after,
+  };
 }

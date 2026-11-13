@@ -15,7 +15,7 @@ export interface LineProgress {
   lapses: number;
 }
 
-export interface ReviewQueueParams {
+interface ReviewQueueParams {
   lines: Array<Opening>;
   progressByLine: Map<string, LineProgress>;
   now: number;

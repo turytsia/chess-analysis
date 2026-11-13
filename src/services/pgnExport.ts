@@ -24,12 +24,11 @@ const LABEL_SUFFIXES: Partial<Record<MoveLabel, string>> = {
   [MoveLabel.Blunder]: '??',
 };
 
-export interface AnnotatedPgnParams {
+interface AnnotatedPgnParams {
   headers: Record<string, string>;
   moves: Array<GameMove>;
   evals: Array<PositionEval>;
   assessments: Array<MoveAssessment | undefined>;
-  notes: string;
 }
 
 export function buildAnnotatedPgn({
@@ -37,7 +36,6 @@ export function buildAnnotatedPgn({
   moves,
   evals,
   assessments,
-  notes,
 }: AnnotatedPgnParams): string {
   const tags: Record<string, string> = { ...headers, Annotator: ANNOTATOR };
   const tagNames = [
@@ -48,9 +46,7 @@ export function buildAnnotatedPgn({
     (name) => `[${name} "${toTagValue(tags[name] ?? '')}"]`
   );
 
-  const gameComment = notes.trim();
   const tokens = [
-    ...(gameComment ? [toComment(gameComment)] : []),
     ...moves.flatMap((move, index) => {
       const isNumberNeeded =
         move.color === 'white' || index === 0 || evals[index] !== undefined;
@@ -87,10 +83,6 @@ function toEvalComment(evaluation: PositionEval): string {
       ? `#${line.mate}`
       : ((line.cp ?? 0) / CENTIPAWNS_PER_PAWN).toFixed(2);
   return `{ [%eval ${value}] }`;
-}
-
-function toComment(text: string): string {
-  return `{ ${text.replace(/[{}]/g, '').replace(/\s+/g, ' ')} }`;
 }
 
 function toTagValue(value: string): string {

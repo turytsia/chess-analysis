@@ -54,7 +54,7 @@ export const Select = <T extends string>({
       <SelectPrimitive.Content
         position='popper'
         sideOffset={4}
-        className='z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md'
+        className='z-50 max-h-[min(18rem,var(--radix-select-content-available-height))] min-w-(--radix-select-trigger-width) overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md'
       >
         <SelectPrimitive.Viewport>
           {options.map((option) => (

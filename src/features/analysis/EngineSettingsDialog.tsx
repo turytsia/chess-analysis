@@ -1,5 +1,3 @@
-import { Cpu } from 'lucide-react';
-
 import { Button } from '../../components/ui/Button';
 import {
   Dialog,
@@ -14,12 +12,18 @@ import { Select } from '../../components/ui/Select';
 import { Slider } from '../../components/ui/Slider';
 import { isMultiThreadingAvailable } from '../../services/engine';
 import {
+  getAverageSearchMs,
+  useEngineStatsStore,
+} from '../../stores/engineStatsStore';
+import {
   ENGINE_LIMITS,
   getMaxThreads,
   useSettingsStore,
 } from '../../stores/settingsStore';
 import { useAnalysisTranslation } from '../../translations/hooks';
 
+const DEFAULT_ENGINE_NAME = 'Stockfish';
+const MILLISECONDS_PER_SECOND = 1000;
 const FIELD_IDS = {
   depth: 'engine-depth',
   threads: 'engine-threads',
@@ -51,6 +55,12 @@ export const EngineSettingsDialog: React.FC<EngineSettingsDialogProps> = ({
   const updateEngine = useSettingsStore((state) => state.updateEngine);
   const isMultiThreaded = isMultiThreadingAvailable();
   const maxThreads = getMaxThreads();
+  const engineName = useEngineStatsStore(
+    (state) => state.engineName ?? DEFAULT_ENGINE_NAME
+  );
+  const averageMs = useEngineStatsStore((state) =>
+    getAverageSearchMs(state.timings, { isMultiThreaded, depth, multiPv })
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -129,12 +139,21 @@ export const EngineSettingsDialog: React.FC<EngineSettingsDialogProps> = ({
               onValueChange={(value) => updateEngine({ multiPv: value })}
             />
           </SettingField>
-          <p className='flex items-center gap-2 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground'>
-            <Cpu className='size-3.5 shrink-0' />
-            {isMultiThreaded
-              ? t('MultiThreadedEngineActive')
-              : t('SingleThreadedEngineActive')}
-          </p>
+          <dl className='grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-md border border-dashed px-3 py-2.5 text-xs'>
+            <dt className='text-muted-foreground'>{t('EngineInUse')}</dt>
+            <dd>{engineName}</dd>
+            <dt className='text-muted-foreground'>{t('SpeedOnDevice')}</dt>
+            <dd>
+              {averageMs === undefined
+                ? t('SpeedNotMeasured')
+                : t('SecondsPerPosition', {
+                    seconds: formatSeconds(averageMs),
+                  })}
+            </dd>
+            <dd className='col-span-2 text-muted-foreground'>
+              {t('SpeedHint')}
+            </dd>
+          </dl>
         </div>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>{t('Done')}</Button>
@@ -160,3 +179,8 @@ const SettingField: React.FC<SettingFieldProps> = ({
     <p className='text-xs text-muted-foreground'>{hint}</p>
   </div>
 );
+
+function formatSeconds(milliseconds: number): string {
+  const seconds = milliseconds / MILLISECONDS_PER_SECOND;
+  return seconds < 1 ? seconds.toFixed(2) : seconds.toFixed(1);
+}

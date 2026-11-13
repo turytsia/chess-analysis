@@ -1,11 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 
-import {
-  Board,
-  type BoardArrow,
-  type SquareHighlight,
-} from '../../components/Board';
+import { Board, type SquareHighlight } from '../../components/Board';
+import { BoardLayout } from '../../components/BoardLayout';
+import { BoardPage } from '../../components/BoardPage';
+import { EvalBar } from '../../components/EvalBar';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 import {
@@ -15,28 +14,31 @@ import {
   TabsTrigger,
 } from '../../components/ui/Tabs';
 import { isCriticalLabel } from '../../services/classify';
-import { getGame, getNoteText, type StoredGame } from '../../services/db';
+import { getGame, type StoredGame } from '../../services/db';
+import { getSideToMove } from '../../services/notation';
 import { getPositions, parsePgn } from '../../services/pgn';
 import { buildAnnotatedPgn } from '../../services/pgnExport';
 import { useAnalysisTranslation } from '../../translations/hooks';
+import { toBestMoveArrows } from '../../utilities/boardArrows';
 import { downloadTextFile } from '../../utilities/download';
 import { toHref } from '../../utilities/router';
 import { AnalysisControls } from './AnalysisControls';
+import { BoardTools } from './BoardTools';
 import { CriticalMoments } from './CriticalMoments';
-import { EvalBar } from './EvalBar';
 import { EvalGraph } from './EvalGraph';
+import type { GameLine } from './exploration';
+import { ExplorationPanel } from './ExplorationPanel';
 import { GameHeader } from './GameHeader';
-import { GameNotes } from './GameNotes';
 import { MoveInsight } from './MoveInsight';
-import { getLabelColor } from './MoveLabelIcon';
+import { getLabelColor } from '../../components/MoveLabelIcon';
 import { MoveList } from './MoveList';
 import { MoveNavigation } from './MoveNavigation';
 import { ReportPanel } from './ReportPanel';
+import { useExplorationAnalysis } from './useExplorationAnalysis';
 import { useGameAnalysis } from './useGameAnalysis';
-import { useMoveNavigation } from './useMoveNavigation';
+import { useGameNavigation } from './useGameNavigation';
 
 const BOARD_ID = 'analysis-board';
-const BEST_MOVE_ARROW_COLOR = 'var(--label-positive)';
 const LAST_MOVE_COLOR = 'var(--board-highlight)';
 const PGN_MIME_TYPE = 'application/x-chess-pgn';
 
@@ -74,18 +76,32 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ gameId }) => {
 const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
   const { t } = useAnalysisTranslation();
   const parsed = useMemo(() => parsePgn(game.pgn), [game.pgn]);
-  const positions = useMemo(() => getPositions(parsed), [parsed]);
+  const gameLine = useMemo(
+    (): GameLine => ({ moves: parsed.moves, positions: getPositions(parsed) }),
+    [parsed]
+  );
   const analysis = useGameAnalysis(game, parsed);
-  const { ply, selectPly } = useMoveNavigation(parsed.moves.length);
+  const navigation = useGameNavigation(gameLine);
   const [orientation, setOrientation] = useState(game.userColor);
   const [isBestMoveShown, setIsBestMoveShown] = useState(true);
 
   const { moves } = parsed;
   const { evals, report } = analysis;
-  const move = moves[ply - 1];
-  const assessment = report.assessments[ply - 1];
-  const evaluation = evals[ply];
-  const bestUci = evaluation?.lines[0]?.pv[0];
+  const { ply, variation, cursor, fen, isExploring } = navigation;
+  const exploration = useExplorationAnalysis({
+    game: gameLine,
+    gameEvals: evals,
+    navigation,
+  });
+  const gameMove = moves[ply - 1];
+  const exploredMove = variation[cursor - 1];
+  const assessment = exploredMove
+    ? exploration.assessments[cursor - 1]
+    : report.assessments[ply - 1];
+  const evaluation = isExploring ? exploration.evaluation : evals[ply];
+  const isEvaluationPending = isExploring
+    ? !exploration.hasFailed
+    : analysis.run !== undefined;
   const nextCriticalIndex = report.assessments.findIndex(
     (candidate, index) =>
       index >= ply &&
@@ -93,7 +109,7 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
       isCriticalLabel(candidate.label)
   );
 
-  const handleExport = async (): Promise<void> => {
+  const handleExport = (): void => {
     downloadTextFile(
       `${game.white.name}-vs-${game.black.name}.pgn`,
       buildAnnotatedPgn({
@@ -101,127 +117,143 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
         moves,
         evals,
         assessments: report.assessments,
-        notes: await getNoteText(game.id),
       }),
       PGN_MIME_TYPE
     );
   };
 
-  const arrows: Array<BoardArrow> =
-    isBestMoveShown && bestUci
-      ? [
-          {
-            from: bestUci.slice(0, 2),
-            to: bestUci.slice(2, 4),
-            color: BEST_MOVE_ARROW_COLOR,
-          },
-        ]
-      : [];
+  const lastMove = exploredMove ?? gameMove;
   const highlightColor = assessment
     ? getLabelColor(assessment.label)
     : LAST_MOVE_COLOR;
-  const highlights: Array<SquareHighlight> = move
+  const highlights: Array<SquareHighlight> = lastMove
     ? [
-        { square: move.from, color: highlightColor },
-        { square: move.to, color: highlightColor },
+        { square: lastMove.from, color: highlightColor },
+        { square: lastMove.to, color: highlightColor },
       ]
     : [];
 
   return (
-    <div className='flex flex-col gap-6'>
+    <BoardPage fitsViewport>
       <GameHeader game={game} onExport={handleExport}>
         <AnalysisControls game={game} parsed={parsed} analysis={analysis} />
       </GameHeader>
-      <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_27rem]'>
-        <div className='mx-auto flex w-full max-w-[40rem] flex-col gap-4'>
-          <div className='flex gap-2'>
-            <EvalBar evaluation={evaluation} orientation={orientation} />
-            <div className='min-w-0 flex-1'>
-              <Board
-                id={BOARD_ID}
-                fen={positions[ply]}
-                orientation={orientation}
-                arrows={arrows}
-                highlights={highlights}
-              />
-            </div>
-          </div>
-          <MoveNavigation
-            ply={ply}
-            lastPly={moves.length}
-            nextCriticalPly={
-              nextCriticalIndex === -1 ? undefined : nextCriticalIndex + 1
-            }
+      <BoardLayout
+        evalBar={
+          <EvalBar
+            evaluation={evaluation}
+            orientation={orientation}
+            isPending={isEvaluationPending}
+          />
+        }
+        board={
+          <Board
+            id={BOARD_ID}
+            fen={fen}
+            orientation={orientation}
+            arrows={isBestMoveShown ? toBestMoveArrows(evaluation) : []}
+            highlights={highlights}
+            movableColor={getSideToMove(fen)}
+            onMove={navigation.playMove}
+          />
+        }
+        tools={
+          <BoardTools
             isBestMoveShown={isBestMoveShown}
-            onSelectPly={selectPly}
+            onToggleBestMove={() => setIsBestMoveShown(!isBestMoveShown)}
             onFlipBoard={() =>
               setOrientation(orientation === 'white' ? 'black' : 'white')
             }
-            onToggleBestMove={() => setIsBestMoveShown(!isBestMoveShown)}
           />
-        </div>
-        <div className='flex flex-col gap-4'>
-          <Card>
-            <CardContent>
-              <MoveInsight
-                fen={positions[ply]}
-                ply={ply}
-                move={move}
-                assessment={assessment}
+        }
+        controls={
+          <MoveNavigation
+            canStepBack={navigation.canStepBack}
+            canStepForward={navigation.canStepForward}
+            nextCriticalPly={
+              nextCriticalIndex === -1 ? undefined : nextCriticalIndex + 1
+            }
+            onStep={navigation.step}
+            onSelectPly={navigation.selectPly}
+          />
+        }
+      >
+        <Card className='shrink-0'>
+          <CardContent className='p-3'>
+            {isExploring ? (
+              <ExplorationPanel
+                fen={fen}
+                basePly={ply}
+                baseMove={gameMove}
+                variation={variation}
+                assessments={exploration.assessments}
+                cursor={cursor}
                 evaluation={evaluation}
-                previousEvaluation={evals[ply - 1]}
+                hasEngineFailed={exploration.hasFailed}
+                onSelectCursor={navigation.selectCursor}
+                onReset={navigation.resetExploration}
               />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <EvalGraph
-                moves={moves}
-                evals={evals}
-                assessments={report.assessments}
+            ) : (
+              <MoveInsight
+                fen={fen}
                 ply={ply}
-                onSelectPly={selectPly}
+                move={gameMove}
+                assessment={report.assessments[ply - 1]}
+                evaluation={evaluation}
               />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <Tabs defaultValue='moves'>
-                <TabsList className='w-full'>
-                  <TabsTrigger value='moves'>{t('Moves')}</TabsTrigger>
-                  <TabsTrigger value='report'>{t('Report')}</TabsTrigger>
-                  <TabsTrigger value='moments'>
-                    {t('CriticalMoments')}
-                  </TabsTrigger>
-                  <TabsTrigger value='notes'>{t('Notes')}</TabsTrigger>
-                </TabsList>
-                <TabsContent value='moves'>
-                  <MoveList
-                    moves={moves}
-                    assessments={report.assessments}
-                    ply={ply}
-                    onSelectPly={selectPly}
-                  />
-                </TabsContent>
-                <TabsContent value='report'>
-                  <ReportPanel game={game} report={report} />
-                </TabsContent>
-                <TabsContent value='moments'>
-                  <CriticalMoments
-                    moves={moves}
-                    assessments={report.assessments}
-                    ply={ply}
-                    onSelectPly={selectPly}
-                  />
-                </TabsContent>
-                <TabsContent value='notes'>
-                  <GameNotes gameId={game.id} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card className='shrink-0'>
+          <CardContent className='p-3'>
+            <EvalGraph
+              moves={moves}
+              evals={evals}
+              assessments={report.assessments}
+              ply={ply}
+              onSelectPly={navigation.selectPly}
+            />
+          </CardContent>
+        </Card>
+        <Card className='lg:flex lg:min-h-28 lg:flex-1 lg:flex-col'>
+          <CardContent className='p-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col'>
+            <Tabs defaultValue='moves' className='gap-3 lg:min-h-0 lg:flex-1'>
+              <TabsList className='w-full shrink-0'>
+                <TabsTrigger value='moves'>{t('Moves')}</TabsTrigger>
+                <TabsTrigger value='report'>{t('Report')}</TabsTrigger>
+                <TabsTrigger value='moments'>
+                  {t('CriticalMoments')}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value='moves' className='lg:min-h-0'>
+                <MoveList
+                  moves={moves}
+                  assessments={report.assessments}
+                  ply={ply}
+                  onSelectPly={navigation.selectPly}
+                />
+              </TabsContent>
+              <TabsContent
+                value='report'
+                className='lg:min-h-0 lg:overflow-y-auto'
+              >
+                <ReportPanel game={game} report={report} />
+              </TabsContent>
+              <TabsContent
+                value='moments'
+                className='lg:min-h-0 lg:overflow-y-auto'
+              >
+                <CriticalMoments
+                  moves={moves}
+                  assessments={report.assessments}
+                  ply={ply}
+                  onSelectPly={navigation.selectPly}
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </BoardLayout>
+    </BoardPage>
   );
 };

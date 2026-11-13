@@ -12,8 +12,8 @@ import {
 import {
   GamePhase,
   getMovePhases,
+  capturesLastMovedPiece,
   getSacrificedMaterial,
-  isRecapture,
 } from './material';
 import type { GameMove } from './pgn';
 
@@ -74,9 +74,15 @@ export interface GameReport {
   counts: Array<LabelCount>;
 }
 
-export interface GameReportParams {
+interface GameReportParams {
   moves: Array<GameMove>;
   evals: Array<PositionEval>;
+  bookPlies: number;
+}
+
+interface AssessMovesParams {
+  moves: Array<GameMove>;
+  evals: Array<PositionEval | undefined>;
   bookPlies: number;
 }
 
@@ -96,8 +102,47 @@ export function buildGameReport({
   evals,
   bookPlies,
 }: GameReportParams): GameReport {
+  const assessments = assessMoves({ moves, evals, bookPlies });
+
+  const isComplete = moves.length > 0 && evals.length > moves.length;
+  return {
+    assessments,
+    accuracy: isComplete
+      ? gameAccuracy(
+          evals.slice(0, moves.length + 1).map(whiteWinPercent),
+          moves[0].color
+        )
+      : undefined,
+    phases: Object.values(GamePhase).map((phase) => ({
+      phase,
+      accuracy: {
+        white: getPhaseAccuracy(moves, assessments, phase, 'white'),
+        black: getPhaseAccuracy(moves, assessments, phase, 'black'),
+      },
+    })),
+    counts: Object.values(MoveLabel).map((label) => ({
+      label,
+      count: {
+        white: countLabel(moves, assessments, label, 'white'),
+        black: countLabel(moves, assessments, label, 'black'),
+      },
+    })),
+  };
+}
+
+/*
+ * Every move is judged from the evaluations of the positions before and after
+ * it, so a move stays unassessed until both are known. Gaps are allowed: the
+ * line may be evaluated in any order.
+ */
+export function assessMoves({
+  moves,
+  evals,
+  bookPlies,
+}: AssessMovesParams): Array<MoveAssessment | undefined> {
   const phases = getMovePhases(moves);
-  const assessments = moves.reduce<Array<MoveAssessment | undefined>>(
+
+  return moves.reduce<Array<MoveAssessment | undefined>>(
     (assessed, move, index) => {
       const before = evals[index];
       const after = evals[index + 1];
@@ -135,31 +180,6 @@ export function buildGameReport({
     },
     []
   );
-
-  const isComplete = moves.length > 0 && evals.length > moves.length;
-  return {
-    assessments,
-    accuracy: isComplete
-      ? gameAccuracy(
-          evals.slice(0, moves.length + 1).map(whiteWinPercent),
-          moves[0].color
-        )
-      : undefined,
-    phases: Object.values(GamePhase).map((phase) => ({
-      phase,
-      accuracy: {
-        white: getPhaseAccuracy(moves, assessments, phase, 'white'),
-        black: getPhaseAccuracy(moves, assessments, phase, 'black'),
-      },
-    })),
-    counts: Object.values(MoveLabel).map((label) => ({
-      label,
-      count: {
-        white: countLabel(moves, assessments, label, 'white'),
-        black: countLabel(moves, assessments, label, 'black'),
-      },
-    })),
-  };
 }
 
 export function isCriticalLabel(label: MoveLabel): boolean {
@@ -231,8 +251,9 @@ function isBrilliant({
 
 /*
  * Great: the only move that holds or wins. It needs a second engine line to
- * compare against. Recaptures and replies to a check are excluded because
- * there the only good move is forced rather than found.
+ * compare against. Taking the piece the opponent just moved and replying to a
+ * check are excluded, because there the only good move is obvious or forced
+ * rather than found.
  */
 function isGreat({
   move,
@@ -242,9 +263,10 @@ function isGreat({
   winAfter,
   isBest,
 }: MoveContext): boolean {
-  const isForced =
-    isRecapture(move, previousMove) || previousMove?.san.endsWith('+') === true;
-  if (!isBest || isForced) {
+  const isObvious =
+    capturesLastMovedPiece(move, previousMove) ||
+    previousMove?.san.endsWith('+') === true;
+  if (!isBest || isObvious) {
     return false;
   }
   const alternativeWin = getAlternativeWin(before, move.uci, move.color);

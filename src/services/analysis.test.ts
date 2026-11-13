@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { analyzePositions, getTerminalEval, toPositionEval } from './analysis';
+import {
+  analyzePosition,
+  analyzePositions,
+  getTerminalEval,
+  toPositionEval,
+} from './analysis';
 import type { Engine, SearchLine } from './engine';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -10,44 +15,48 @@ const STALEMATE = '7k/5Q2/6K1/8/8/8/8/8 b - - 0 1';
 
 function engineOf(search: Engine['search']): Engine {
   return {
+    name: 'Test engine',
     isMultiThreaded: false,
     configure: vi.fn(async () => undefined),
     startNewGame: vi.fn(async () => undefined),
     search,
-    stop: vi.fn(),
     terminate: vi.fn(),
   };
 }
 
-function lineOf(cp: number): Array<SearchLine> {
-  return [{ multiPv: 1, depth: 12, cp, pv: ['e2e4'] }];
+function lineOf(cp: number, depth = 12): Array<SearchLine> {
+  return [{ multiPv: 1, depth, cp, pv: ['e2e4'] }];
 }
 
 describe('analysis', () => {
   describe('analyzePositions', () => {
     it('should evaluate every position in order and report progress', async () => {
-      const search = vi.fn(async () => lineOf(30));
+      const search = vi.fn<Engine['search']>(async () => lineOf(30));
       const onProgress = vi.fn();
+      const onSearched = vi.fn();
+      const { signal } = new AbortController();
 
       const evals = await analyzePositions({
         engine: engineOf(search),
         fens: [START, AFTER_E4],
         depth: 12,
         completed: [],
-        signal: new AbortController().signal,
+        signal,
         onProgress,
+        onSearched,
       });
 
       expect(search.mock.calls).toEqual([
-        [START, 12],
-        [AFTER_E4, 12],
+        [START, { depth: 12, signal }],
+        [AFTER_E4, { depth: 12, signal }],
       ]);
       expect(evals).toHaveLength(2);
       expect(onProgress).toHaveBeenCalledTimes(2);
+      expect(onSearched).toHaveBeenCalledTimes(2);
     });
 
     it('should resume after the positions that were already analyzed', async () => {
-      const search = vi.fn(async () => lineOf(30));
+      const search = vi.fn<Engine['search']>(async () => lineOf(30));
       const completed = [toPositionEval(START, lineOf(10))];
 
       const evals = await analyzePositions({
@@ -57,14 +66,15 @@ describe('analysis', () => {
         completed,
         signal: new AbortController().signal,
         onProgress: vi.fn(),
+        onSearched: vi.fn(),
       });
 
-      expect(search.mock.calls).toEqual([[AFTER_E4, 12]]);
+      expect(search.mock.calls.map(([fen]) => fen)).toEqual([AFTER_E4]);
       expect(evals[0]).toBe(completed[0]);
     });
 
     it('should not ask the engine about finished games', async () => {
-      const search = vi.fn(async () => lineOf(30));
+      const search = vi.fn<Engine['search']>(async () => lineOf(30));
 
       const evals = await analyzePositions({
         engine: engineOf(search),
@@ -73,32 +83,107 @@ describe('analysis', () => {
         completed: [],
         signal: new AbortController().signal,
         onProgress: vi.fn(),
+        onSearched: vi.fn(),
       });
 
       expect(search).not.toHaveBeenCalled();
       expect(evals).toEqual([{ lines: [], outcome: 'whiteWins' }]);
     });
 
-    it('should stop the engine and drop the unfinished position when cancelled', async () => {
+    it('should drop the unfinished position and stop when cancelled', async () => {
       const controller = new AbortController();
-      const engine = engineOf(
-        vi.fn(async () => {
-          controller.abort();
-          return lineOf(30);
-        })
-      );
+      const search = vi.fn<Engine['search']>(async () => {
+        controller.abort();
+        return lineOf(30);
+      });
 
       const evals = await analyzePositions({
-        engine,
+        engine: engineOf(search),
         fens: [START, AFTER_E4],
         depth: 12,
         completed: [],
         signal: controller.signal,
         onProgress: vi.fn(),
+        onSearched: vi.fn(),
       });
 
-      expect(engine.stop).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledTimes(1);
       expect(evals).toEqual([]);
+    });
+  });
+
+  describe('analyzePosition', () => {
+    it('should resolve with the evaluation once the search has finished', async () => {
+      const search = vi.fn<Engine['search']>(async () => lineOf(30));
+      const onSearched = vi.fn();
+      const { signal } = new AbortController();
+
+      const evaluation = await analyzePosition({
+        engine: engineOf(search),
+        fen: START,
+        depth: 12,
+        signal,
+        onSearched,
+      });
+
+      expect(search).toHaveBeenCalledWith(START, { depth: 12, signal });
+      expect(evaluation).toEqual({
+        lines: [{ cp: 30, depth: 12, pv: ['e2e4'] }],
+      });
+      expect(onSearched).toHaveBeenCalledWith({
+        engineName: 'Test engine',
+        isMultiThreaded: false,
+        durationMs: expect.any(Number),
+      });
+    });
+
+    it("should give scores from White's point of view", async () => {
+      const evaluation = await analyzePosition({
+        engine: engineOf(async () => lineOf(30)),
+        fen: AFTER_E4,
+        depth: 12,
+        signal: new AbortController().signal,
+        onSearched: vi.fn(),
+      });
+
+      expect(evaluation?.lines[0].cp).toBe(-30);
+    });
+
+    it('should resolve with the result of a finished game without asking the engine', async () => {
+      const search = vi.fn<Engine['search']>(async () => lineOf(30));
+      const onSearched = vi.fn();
+
+      const evaluation = await analyzePosition({
+        engine: engineOf(search),
+        fen: STALEMATE,
+        depth: 12,
+        signal: new AbortController().signal,
+        onSearched,
+      });
+
+      expect(search).not.toHaveBeenCalled();
+      expect(onSearched).not.toHaveBeenCalled();
+      expect(evaluation).toEqual({ lines: [], outcome: 'draw' });
+    });
+
+    it('should resolve with nothing when the search was cancelled', async () => {
+      const controller = new AbortController();
+      const search: Engine['search'] = async () => {
+        controller.abort();
+        return lineOf(30);
+      };
+      const onSearched = vi.fn();
+
+      const evaluation = await analyzePosition({
+        engine: engineOf(search),
+        fen: START,
+        depth: 12,
+        signal: controller.signal,
+        onSearched,
+      });
+
+      expect(evaluation).toBeUndefined();
+      expect(onSearched).not.toHaveBeenCalled();
     });
   });
 

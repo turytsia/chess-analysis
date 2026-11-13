@@ -1,5 +1,6 @@
 import { LoaderCircle } from 'lucide-react';
 
+import { RelativeDate } from '../../components/RelativeDate';
 import { Badge } from '../../components/ui/Badge';
 import {
   Table,
@@ -13,11 +14,7 @@ import type { GameOutcome, PlayerInfo, StoredGame } from '../../services/db';
 import { useAnalysisStore } from '../../stores/analysisStore';
 import { useLibraryTranslation } from '../../translations/hooks';
 import { cn } from '../../utilities/cn';
-import {
-  formatDate,
-  formatPercent,
-  formatTimeControl,
-} from '../../utilities/format';
+import { formatPercent, formatTimeControl } from '../../utilities/format';
 import { navigate, toHref } from '../../utilities/router';
 import { useLocalizeTimeClass } from '../../utilities/useLocalizeTimeClass';
 
@@ -131,7 +128,7 @@ const GameRow: React.FC<GameRowProps> = ({ game, isAnalyzing }) => {
         </span>
       </TableCell>
       <TableCell className='text-muted-foreground'>
-        {formatDate(game.playedAt)}
+        <RelativeDate timestamp={game.playedAt} />
       </TableCell>
       <TableCell className='text-right'>
         {isAnalyzing && (

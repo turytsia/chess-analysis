@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getPositions, parsePgn, splitPgn } from './pgn';
+import { createMove, getPositions, parsePgn, playLine, splitPgn } from './pgn';
 
 describe('pgn', () => {
   describe('parsePgn', () => {
@@ -41,6 +41,47 @@ describe('pgn', () => {
 
     it('should throw for text that is not a game', () => {
       expect(() => parsePgn('1. e4 Ke7 2. Zz9')).toThrow();
+    });
+  });
+
+  describe('createMove', () => {
+    const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+    it('should describe a legal move the same way a parsed game does', () => {
+      const [parsed] = parsePgn('1. e4 *').moves;
+
+      expect(createMove(START, 'e2', 'e4', 1)).toEqual(parsed);
+    });
+
+    it('should number the move with the given ply', () => {
+      expect(createMove(START, 'g1', 'f3', 21)).toMatchObject({
+        ply: 21,
+        san: 'Nf3',
+        uci: 'g1f3',
+        color: 'white',
+      });
+    });
+
+    it('should promote to a queen', () => {
+      expect(
+        createMove('8/P6k/8/8/8/8/8/K7 w - - 0 1', 'a7', 'a8', 1)
+      ).toMatchObject({ san: 'a8=Q', uci: 'a7a8q', promotion: 'q' });
+    });
+
+    it('should return nothing for an illegal move', () => {
+      expect(createMove(START, 'e2', 'e5', 1)).toBeUndefined();
+    });
+  });
+
+  describe('playLine', () => {
+    it('should replay a line of moves the same way a parsed game does', () => {
+      expect(playLine(['e4', 'c6', 'd4'])).toEqual(
+        parsePgn('1. e4 c6 2. d4 *').moves
+      );
+    });
+
+    it('should return no moves for an empty line', () => {
+      expect(playLine([])).toEqual([]);
     });
   });
 

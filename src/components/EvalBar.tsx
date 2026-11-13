@@ -1,11 +1,13 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
 import {
   whiteWinPercent,
   type PlayerColor,
   type PositionEval,
-} from '../../services/evaluation';
-import { useAnalysisTranslation } from '../../translations/hooks';
-import { cn } from '../../utilities/cn';
-import { formatEval } from '../../utilities/format';
+} from '../services/evaluation';
+import { cn } from '../utilities/cn';
+import { formatEval } from '../utilities/format';
 
 const NEUTRAL_PERCENT = 50;
 const LABEL_DIGITS = 1;
@@ -13,16 +15,21 @@ const LABEL_DIGITS = 1;
 interface EvalBarProps {
   evaluation: PositionEval | undefined;
   orientation: PlayerColor;
+  isPending?: boolean;
 }
 
 export const EvalBar: React.FC<EvalBarProps> = ({
   evaluation,
   orientation,
+  isPending = false,
 }) => {
-  const { t } = useAnalysisTranslation();
-  const whitePercent = evaluation
-    ? whiteWinPercent(evaluation)
-    : NEUTRAL_PERCENT;
+  const { t } = useTranslation();
+  const [lastEvaluation, setLastEvaluation] = useState(evaluation);
+  if (evaluation && evaluation !== lastEvaluation) {
+    setLastEvaluation(evaluation);
+  }
+  const shown = evaluation ?? (isPending ? lastEvaluation : undefined);
+  const whitePercent = shown ? whiteWinPercent(shown) : NEUTRAL_PERCENT;
   const isWhiteAhead = whitePercent >= NEUTRAL_PERCENT;
   const isLabelAtBottom = isWhiteAhead === (orientation === 'white');
 
@@ -49,7 +56,7 @@ export const EvalBar: React.FC<EvalBarProps> = ({
           isWhiteAhead ? 'text-eval-black' : 'text-eval-white'
         )}
       >
-        {formatEval(evaluation, LABEL_DIGITS)}
+        {formatEval(shown, LABEL_DIGITS)}
       </span>
     </div>
   );

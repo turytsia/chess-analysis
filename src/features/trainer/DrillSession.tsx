@@ -36,8 +36,8 @@ export const DrillSession: React.FC<DrillSessionProps> = ({
   };
 
   return (
-    <div className='flex flex-col gap-4'>
-      <div className='flex items-center justify-between gap-2'>
+    <div className='flex flex-col gap-3 lg:h-full'>
+      <div className='flex shrink-0 items-center justify-between gap-2'>
         <p className='text-sm text-muted-foreground'>
           {t('SessionProgress', {
             current: lineIndex + 1,

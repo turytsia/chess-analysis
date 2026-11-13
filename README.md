@@ -8,15 +8,21 @@ your device: there is no backend and no account.
 - **Game library.** Import games by chess.com username, or paste or upload PGN. Filter by color,
   result, opening, date and analysis status.
 - **Engine analysis.** Multi-threaded Stockfish (WebAssembly) analyzes every position of a game,
-  with a progress bar and cancel. Depth, threads, hash size and number of lines are configurable.
+  with a progress bar and cancel. Depth, threads, hash size and number of lines are configurable,
+  and the settings show how long one position takes on your device with the chosen values.
   Results are cached, so a game is never analyzed twice with the same settings.
 - **Move labels.** Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss and
   Blunder, plus accuracy per side and per game phase.
 - **Analysis view.** Board with keyboard navigation, eval bar, best-move arrow, move list, a
-  clickable graph of winning chances, a list of critical moments and notes per game.
-- **Export.** Download any game as a PGN annotated with move labels, evaluations and your notes.
-- **Opening trainer.** Browse the Caro-Kann tree with names and ECO codes, drill lines as Black
-  with spaced repetition, and see where your own games left theory.
+  clickable graph of winning chances and a list of critical moments.
+- **Explore other moves.** Move the pieces at any point of a game to try a different line. The
+  engine evaluates every position you reach and tells you how good your last move was, from Best
+  to Blunder. The game's own moves stay untouched, and one click takes you back to them.
+- **Export.** Download any game as a PGN annotated with move labels and evaluations.
+- **Opening trainer.** Browse the Caro-Kann tree with names and ECO codes, keep playing beyond
+  the book with the engine evaluating each position and judging your last move, step back and
+  forward through the line you played, drill lines as Black with spaced repetition, and see where your own
+  games left theory.
 
 ## Getting started
 
@@ -64,9 +70,12 @@ headers. `coi-serviceworker.js` adds them from a service worker instead. On the 
 page reloads once while the worker takes control. If the browser blocks service workers, the app
 falls back to single-threaded Stockfish and keeps working.
 
+Safari, and every browser on iPhone and iPad, always uses single-threaded Stockfish. Multi-threaded
+Stockfish is slower there and can freeze in the middle of a search.
+
 ## Where your data lives
 
-- Games, analyses, notes and trainer progress are stored in IndexedDB.
+- Games, analyses and trainer progress are stored in IndexedDB.
 - Settings and your chess.com username are stored in `localStorage`.
 
 Nothing leaves the browser except the requests to the public chess.com API. Clearing the site data

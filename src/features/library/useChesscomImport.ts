@@ -4,7 +4,7 @@ import { ChesscomErrorCode } from '../../services/chesscom';
 import { useImportStore } from '../../stores/importStore';
 import { useLibraryTranslation } from '../../translations/hooks';
 
-export type ChesscomImportHandler = (
+type ChesscomImportHandler = (
   username: string,
   monthLimit: number | undefined
 ) => Promise<boolean>;

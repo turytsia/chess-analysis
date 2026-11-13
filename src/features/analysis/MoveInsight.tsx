@@ -1,19 +1,11 @@
-import { Trans } from 'react-i18next';
-
+import { EngineLines } from '../../components/EngineLines';
 import type { MoveAssessment } from '../../services/classify';
 import type { PositionEval } from '../../services/evaluation';
-import { toSanLine } from '../../services/notation';
 import type { GameMove } from '../../services/pgn';
 import { useAnalysisTranslation } from '../../translations/hooks';
-import {
-  formatEval,
-  formatMoveLine,
-  formatMoveNumber,
-} from '../../utilities/format';
-import { MoveLabelIcon } from './MoveLabelIcon';
-import { useLocalizeMoveLabel } from './useLocalizeMoveLabel';
-
-const ENGINE_LINE_PLIES = 8;
+import { formatEval, formatMoveNumber } from '../../utilities/format';
+import { MoveLabelIcon } from '../../components/MoveLabelIcon';
+import { useLocalizeMoveLabel } from '../../utilities/useLocalizeMoveLabel';
 
 interface MoveInsightProps {
   fen: string;
@@ -21,13 +13,6 @@ interface MoveInsightProps {
   move: GameMove | undefined;
   assessment: MoveAssessment | undefined;
   evaluation: PositionEval | undefined;
-  previousEvaluation: PositionEval | undefined;
-}
-
-interface EngineLinesProps {
-  fen: string;
-  ply: number;
-  evaluation: PositionEval;
 }
 
 export const MoveInsight: React.FC<MoveInsightProps> = ({
@@ -36,15 +21,9 @@ export const MoveInsight: React.FC<MoveInsightProps> = ({
   move,
   assessment,
   evaluation,
-  previousEvaluation,
 }) => {
   const { t } = useAnalysisTranslation();
   const localizeLabel = useLocalizeMoveLabel();
-  const bestUci = previousEvaluation?.lines[0]?.pv[0];
-  const [bestSan] =
-    move && bestUci && assessment && !assessment.isBest
-      ? toSanLine(move.fenBefore, [bestUci], 1)
-      : [];
 
   return (
     <div className='flex flex-col gap-3'>
@@ -65,18 +44,6 @@ export const MoveInsight: React.FC<MoveInsightProps> = ({
               </span>
             )}
           </div>
-          {bestSan && (
-            <p className='text-sm text-muted-foreground'>
-              <Trans
-                t={t}
-                i18nKey='BestMoveWas'
-                values={{ move: bestSan }}
-                components={{
-                  move: <strong className='font-medium text-foreground' />,
-                }}
-              />
-            </p>
-          )}
           {move && !assessment && (
             <p className='text-sm text-muted-foreground'>
               {t('MoveNotAnalyzed')}
@@ -87,34 +54,9 @@ export const MoveInsight: React.FC<MoveInsightProps> = ({
           {formatEval(evaluation)}
         </span>
       </div>
-      {evaluation && evaluation.lines.length > 0 && (
+      {evaluation && (
         <EngineLines fen={fen} ply={ply} evaluation={evaluation} />
       )}
     </div>
-  );
-};
-
-const EngineLines: React.FC<EngineLinesProps> = ({ fen, ply, evaluation }) => {
-  const { t } = useAnalysisTranslation();
-
-  return (
-    <ul aria-label={t('EngineLines')} className='flex flex-col gap-1'>
-      {evaluation.lines.map((line, index) => (
-        <li
-          key={index}
-          className='flex items-baseline gap-2 text-xs text-muted-foreground'
-        >
-          <span className='w-11 shrink-0 rounded-sm bg-muted px-1 py-0.5 text-center font-mono font-medium text-foreground tabular-nums'>
-            {formatEval({ lines: [line] })}
-          </span>
-          <span className='truncate font-mono'>
-            {formatMoveLine(
-              toSanLine(fen, line.pv, ENGINE_LINE_PLIES),
-              ply + 1
-            )}
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 };

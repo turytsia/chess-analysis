@@ -1,13 +1,10 @@
-import { Chess } from 'chess.js';
+import { Chess, type Square } from 'chess.js';
 
-const DEFAULT_PROMOTION = 'q';
+import type { PlayerColor } from './evaluation';
 
-export interface ResolvedMove {
-  san: string;
-  fenAfter: string;
-}
+const SQUARE_PATTERN = /^[a-h][1-8]$/;
 
-export interface MoveSquares {
+interface MoveSquares {
   from: string;
   to: string;
 }
@@ -40,23 +37,6 @@ export function getLinePositions(sans: Array<string>): Array<string> {
   return [chess.fen(), ...sans.map((san) => chess.move(san).after)];
 }
 
-export function resolveMove(
-  fen: string,
-  from: string,
-  to: string
-): ResolvedMove | undefined {
-  try {
-    const move = new Chess(fen).move({
-      from,
-      to,
-      promotion: DEFAULT_PROMOTION,
-    });
-    return { san: move.san, fenAfter: move.after };
-  } catch {
-    return undefined;
-  }
-}
-
 export function getMoveSquares(
   fen: string,
   san: string
@@ -67,4 +47,26 @@ export function getMoveSquares(
   } catch {
     return undefined;
   }
+}
+
+export function getSideToMove(fen: string): PlayerColor {
+  return fen.split(' ')[1] === 'b' ? 'black' : 'white';
+}
+
+export function getPieceColor(
+  fen: string,
+  square: string
+): PlayerColor | undefined {
+  if (!isSquare(square)) {
+    return undefined;
+  }
+  const piece = new Chess(fen).get(square);
+  if (!piece) {
+    return undefined;
+  }
+  return piece.color === 'w' ? 'white' : 'black';
+}
+
+function isSquare(value: string): value is Square {
+  return SQUARE_PATTERN.test(value);
 }

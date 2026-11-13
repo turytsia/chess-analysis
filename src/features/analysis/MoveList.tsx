@@ -4,8 +4,9 @@ import type { MoveAssessment } from '../../services/classify';
 import type { GameMove } from '../../services/pgn';
 import { useAnalysisTranslation } from '../../translations/hooks';
 import { cn } from '../../utilities/cn';
-import { MoveLabelIcon } from './MoveLabelIcon';
-import { useLocalizeMoveLabel } from './useLocalizeMoveLabel';
+import { scrollWithin } from '../../utilities/scrollWithin';
+import { MoveLabelIcon } from '../../components/MoveLabelIcon';
+import { useLocalizeMoveLabel } from '../../utilities/useLocalizeMoveLabel';
 
 interface MoveListProps {
   moves: Array<GameMove>;
@@ -34,9 +35,11 @@ export const MoveList: React.FC<MoveListProps> = ({
   const rowCount = Math.ceil((moves.length + leadingBlank) / 2);
 
   useEffect(() => {
-    listRef.current
-      ?.querySelector('[aria-current="true"]')
-      ?.scrollIntoView({ block: 'nearest' });
+    const list = listRef.current;
+    const active = list?.querySelector('[aria-current="true"]');
+    if (list && active instanceof HTMLElement) {
+      scrollWithin(list, active);
+    }
   }, [ply]);
 
   if (moves.length === 0) {
@@ -46,7 +49,7 @@ export const MoveList: React.FC<MoveListProps> = ({
   return (
     <ol
       ref={listRef}
-      className='grid max-h-[max(14rem,calc(100dvh-46rem))] grid-cols-[2.5rem_1fr_1fr] content-start gap-x-1 gap-y-0.5 overflow-y-auto pr-1 text-sm'
+      className='relative grid max-h-72 grid-cols-[2.5rem_1fr_1fr] content-start gap-x-1 gap-y-0.5 overflow-y-auto pr-1 text-sm lg:h-full lg:max-h-none'
     >
       {Array.from({ length: rowCount }, (_, row) => {
         const whiteIndex = row * 2 - leadingBlank;

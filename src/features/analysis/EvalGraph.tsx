@@ -16,10 +16,9 @@ import type { GameMove } from '../../services/pgn';
 import { useAnalysisTranslation } from '../../translations/hooks';
 import { cn } from '../../utilities/cn';
 import { formatEval, formatMoveNumber } from '../../utilities/format';
-import { MoveLabelIcon } from './MoveLabelIcon';
-import { useLocalizeMoveLabel } from './useLocalizeMoveLabel';
+import { MoveLabelIcon } from '../../components/MoveLabelIcon';
+import { useLocalizeMoveLabel } from '../../utilities/useLocalizeMoveLabel';
 
-const CHART_HEIGHT = 120;
 const CHART_MARGIN = { top: 8, right: 8, bottom: 0, left: 8 } as const;
 const WIN_DOMAIN = [0, 100] as const;
 const EVEN_CHANCES = 50;
@@ -94,64 +93,63 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
   );
 
   return (
-    <figure className='flex flex-col gap-2'>
-      <figcaption className='flex items-baseline justify-between gap-2'>
-        <span className='text-sm font-medium'>{t('WhiteWinChance')}</span>
-        <span className='text-xs text-muted-foreground'>
-          {t('WinChanceGraphHint')}
-        </span>
+    <figure className='flex flex-col gap-1.5'>
+      <figcaption className='text-sm font-medium'>
+        {t('WhiteWinChance')}
       </figcaption>
-      <ResponsiveContainer width='100%' height={CHART_HEIGHT}>
-        <AreaChart
-          data={points}
-          margin={CHART_MARGIN}
-          className='cursor-pointer'
-          onClick={({ activeTooltipIndex }) => {
-            const selected = Number(activeTooltipIndex);
-            activeTooltipIndex != null &&
-              Number.isInteger(selected) &&
-              onSelectPly(selected);
-          }}
-        >
-          <CartesianGrid vertical={false} stroke='var(--border)' />
-          <XAxis
-            dataKey='ply'
-            type='number'
-            domain={[0, Math.max(moves.length, 1)]}
-            tickFormatter={(value: number) => String(Math.ceil(value / 2))}
-            tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-            tickLine={false}
-            axisLine={false}
-            allowDecimals={false}
-          />
-          <YAxis domain={WIN_DOMAIN} ticks={[0, EVEN_CHANCES, 100]} hide />
-          <ReferenceLine y={EVEN_CHANCES} stroke='var(--ring)' />
-          <ReferenceLine x={ply} stroke='var(--foreground)' strokeWidth={1} />
-          <Tooltip
-            content={<GraphTooltip />}
-            cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1 }}
-            isAnimationActive={false}
-          />
-          <Area
-            dataKey='win'
-            type='monotone'
-            stroke='var(--foreground)'
-            strokeWidth={2}
-            strokeLinejoin='round'
-            strokeLinecap='round'
-            fill='var(--foreground)'
-            fillOpacity={0.1}
-            dot={renderMarkerDot}
-            activeDot={{
-              r: MARKER_RADIUS,
-              stroke: 'var(--card)',
-              strokeWidth: 2,
+      <div className='h-[clamp(3.5rem,11dvh,6rem)]'>
+        <ResponsiveContainer width='100%' height='100%'>
+          <AreaChart
+            data={points}
+            margin={CHART_MARGIN}
+            className='cursor-pointer'
+            onClick={({ activeTooltipIndex }) => {
+              const selected = Number(activeTooltipIndex);
+              activeTooltipIndex != null &&
+                Number.isInteger(selected) &&
+                onSelectPly(selected);
             }}
-            isAnimationActive={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-      <ul className='flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground'>
+          >
+            <CartesianGrid vertical={false} stroke='var(--border)' />
+            <XAxis
+              dataKey='ply'
+              type='number'
+              domain={[0, Math.max(moves.length, 1)]}
+              tickFormatter={(value: number) => String(Math.ceil(value / 2))}
+              tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+            />
+            <YAxis domain={WIN_DOMAIN} ticks={[0, EVEN_CHANCES, 100]} hide />
+            <ReferenceLine y={EVEN_CHANCES} stroke='var(--ring)' />
+            <ReferenceLine x={ply} stroke='var(--foreground)' strokeWidth={1} />
+            <Tooltip
+              content={<GraphTooltip />}
+              cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1 }}
+              isAnimationActive={false}
+            />
+            <Area
+              dataKey='win'
+              type='monotone'
+              stroke='var(--foreground)'
+              strokeWidth={2}
+              strokeLinejoin='round'
+              strokeLinecap='round'
+              fill='var(--foreground)'
+              fillOpacity={0.1}
+              dot={renderMarkerDot}
+              activeDot={{
+                r: MARKER_RADIUS,
+                stroke: 'var(--card)',
+                strokeWidth: 2,
+              }}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <ul className='flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground [@media(max-height:44rem)]:hidden'>
         <MarkerLegendItem kind='blunder'>{t('Blunder')}</MarkerLegendItem>
         <MarkerLegendItem kind='mistake'>{t('MistakeOrMiss')}</MarkerLegendItem>
         <MarkerLegendItem kind='highlight'>

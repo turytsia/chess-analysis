@@ -13,7 +13,7 @@ interface BookMove {
   name: string | undefined;
 }
 
-export interface TheoryDeviation {
+interface TheoryDeviation {
   game: StoredGame;
   side: DeviationSide;
   ply: number;

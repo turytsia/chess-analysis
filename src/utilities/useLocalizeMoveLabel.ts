@@ -1,8 +1,9 @@
-import { MoveLabel } from '../../services/classify';
-import { useAnalysisTranslation } from '../../translations/hooks';
+import { useTranslation } from 'react-i18next';
+
+import { MoveLabel } from '../services/classify';
 
 export function useLocalizeMoveLabel(): (label: MoveLabel) => string {
-  const { t } = useAnalysisTranslation();
+  const { t } = useTranslation();
 
   return (label) =>
     ({

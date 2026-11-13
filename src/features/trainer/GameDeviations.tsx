@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { GraduationCap, ListTree } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { RelativeDate } from '../../components/RelativeDate';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -15,11 +16,7 @@ import {
 } from '../../services/deviations';
 import type { Opening, OpeningBook } from '../../services/openings';
 import { useTrainerTranslation } from '../../translations/hooks';
-import {
-  formatDate,
-  formatMoveLine,
-  formatMoveNumber,
-} from '../../utilities/format';
+import { formatMoveLine, formatMoveNumber } from '../../utilities/format';
 import { toHref } from '../../utilities/router';
 
 const CARO_KANN_ENTRY_PLIES = 2;
@@ -158,19 +155,21 @@ const DeviationCard: React.FC<DeviationCardProps> = ({
           <dd>
             <ul className='flex flex-wrap gap-x-3 gap-y-1'>
               {group.games.slice(0, MAX_LISTED_GAMES).map((game) => (
-                <li key={game.id}>
+                <li key={game.id} className='flex items-baseline gap-1.5'>
                   <a
                     href={toHref({ name: 'game', gameId: game.id })}
                     className='rounded-sm underline decoration-border underline-offset-4 outline-none hover:decoration-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50'
                   >
-                    {t('GameAgainstOnDate', {
+                    {t('GameAgainst', {
                       opponent:
                         game.userColor === 'white'
                           ? game.black.name
                           : game.white.name,
-                      date: formatDate(game.playedAt),
                     })}
                   </a>
+                  <span className='text-xs text-muted-foreground'>
+                    <RelativeDate timestamp={game.playedAt} />
+                  </span>
                 </li>
               ))}
             </ul>

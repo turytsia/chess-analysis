@@ -2,21 +2,19 @@ import { CircleCheck, CircleX, Lightbulb } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Board, type BoardArrow } from '../../components/Board';
+import { BoardLayout } from '../../components/BoardLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Progress } from '../../components/ui/Progress';
-import {
-  getLinePositions,
-  getMoveSquares,
-  resolveMove,
-} from '../../services/notation';
+import { getLinePositions, getMoveSquares } from '../../services/notation';
 import {
   followSequence,
   getNodeName,
   type Opening,
   type OpeningBook,
 } from '../../services/openings';
+import { createMove } from '../../services/pgn';
 import { useTrainerTranslation } from '../../translations/hooks';
 import { formatMoveLine } from '../../utilities/format';
 
@@ -81,7 +79,9 @@ export const LineDrill: React.FC<LineDrillProps> = ({
   }, [isFinished, isTraineeTurn, playedPlies]);
 
   const handleMove = (from: string, to: string): boolean => {
-    const move = isTraineeTurn ? resolveMove(fen, from, to) : undefined;
+    const move = isTraineeTurn
+      ? createMove(fen, from, to, playedPlies + 1)
+      : undefined;
     if (!move) {
       return false;
     }
@@ -122,8 +122,8 @@ export const LineDrill: React.FC<LineDrillProps> = ({
   const isClean = mistakes === 0 && !hasUsedHint;
 
   return (
-    <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_26rem]'>
-      <div className='mx-auto w-full max-w-[38rem]'>
+    <BoardLayout
+      board={
         <Board
           id={BOARD_ID}
           fen={fen}
@@ -132,8 +132,9 @@ export const LineDrill: React.FC<LineDrillProps> = ({
           movableColor={isTraineeTurn ? TRAINEE_COLOR : undefined}
           onMove={handleMove}
         />
-      </div>
-      <Card>
+      }
+    >
+      <Card className='shrink-0'>
         <CardContent className='flex flex-col gap-4'>
           <div className='flex flex-col gap-1.5'>
             <div className='flex items-center gap-2'>
@@ -181,7 +182,7 @@ export const LineDrill: React.FC<LineDrillProps> = ({
           </div>
         </CardContent>
       </Card>
-    </div>
+    </BoardLayout>
   );
 };
 

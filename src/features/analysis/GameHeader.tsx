@@ -1,6 +1,7 @@
 import { ArrowLeft, Download, ExternalLink, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { RelativeDate } from '../../components/RelativeDate';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
@@ -18,7 +19,7 @@ import {
   type StoredGame,
 } from '../../services/db';
 import { useAnalysisTranslation } from '../../translations/hooks';
-import { formatDate, formatTimeControl } from '../../utilities/format';
+import { formatTimeControl } from '../../utilities/format';
 import { navigate, toHref } from '../../utilities/router';
 import { useLocalizeTimeClass } from '../../utilities/useLocalizeTimeClass';
 
@@ -50,14 +51,53 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   const timeControl = formatTimeControl(game.timeControl);
 
   return (
-    <header className='flex flex-col gap-4'>
-      <div className='flex items-center justify-between gap-2'>
-        <Button variant='ghost' size='sm' asChild className='-ml-3'>
-          <a href={toHref({ name: 'library' })}>
-            <ArrowLeft />
-            {t('Games')}
-          </a>
-        </Button>
+    <header className='flex flex-wrap items-center justify-between gap-x-4 gap-y-2'>
+      <div className='flex min-w-0 items-center gap-2'>
+        <Tooltip content={t('Games')}>
+          <Button variant='ghost' size='iconSm' asChild className='-ml-2'>
+            <a href={toHref({ name: 'library' })} aria-label={t('Games')}>
+              <ArrowLeft />
+            </a>
+          </Button>
+        </Tooltip>
+        <div className='flex min-w-0 flex-col gap-0.5'>
+          <h1 className='flex flex-wrap items-center gap-x-2 text-lg leading-tight font-semibold tracking-tight'>
+            <PlayerName
+              player={game.white}
+              isUser={game.userColor === 'white'}
+            />
+            <span className='text-sm font-normal text-muted-foreground'>
+              {t('Versus')}
+            </span>
+            <PlayerName
+              player={game.black}
+              isUser={game.userColor === 'black'}
+            />
+            <Badge variant='outline' className='font-mono'>
+              {game.result}
+            </Badge>
+          </h1>
+          <p className='flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground'>
+            {game.opening && (
+              <>
+                {game.eco && (
+                  <span className='font-mono text-xs'>{game.eco}</span>
+                )}
+                <span className='text-foreground'>{game.opening}</span>
+                <span aria-hidden>·</span>
+              </>
+            )}
+            <RelativeDate timestamp={game.playedAt} />
+            <span aria-hidden>·</span>
+            <span>{localizeTimeClass(game.timeClass)}</span>
+            {timeControl && (
+              <span className='font-mono text-xs'>{timeControl}</span>
+            )}
+          </p>
+        </div>
+      </div>
+      <div className='flex flex-wrap items-center gap-2'>
+        {children}
         <div className='flex items-center gap-1'>
           {game.url && (
             <Tooltip content={t('OpenOriginalGame')}>
@@ -94,44 +134,6 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             </Button>
           </Tooltip>
         </div>
-      </div>
-      <div className='flex flex-wrap items-end justify-between gap-4'>
-        <div className='flex min-w-0 flex-col gap-2'>
-          <h1 className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xl font-semibold tracking-tight'>
-            <PlayerName
-              player={game.white}
-              isUser={game.userColor === 'white'}
-            />
-            <span className='text-sm font-normal text-muted-foreground'>
-              {t('Versus')}
-            </span>
-            <PlayerName
-              player={game.black}
-              isUser={game.userColor === 'black'}
-            />
-            <Badge variant='outline' className='font-mono'>
-              {game.result}
-            </Badge>
-          </h1>
-          <p className='flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground'>
-            {game.opening && (
-              <>
-                {game.eco && (
-                  <span className='font-mono text-xs'>{game.eco}</span>
-                )}
-                <span className='text-foreground'>{game.opening}</span>
-                <span aria-hidden>·</span>
-              </>
-            )}
-            <span>{formatDate(game.playedAt)}</span>
-            <span aria-hidden>·</span>
-            <span>{localizeTimeClass(game.timeClass)}</span>
-            {timeControl && (
-              <span className='font-mono text-xs'>{timeControl}</span>
-            )}
-          </p>
-        </div>
-        {children}
       </div>
       <DeleteGameDialog
         gameId={game.id}

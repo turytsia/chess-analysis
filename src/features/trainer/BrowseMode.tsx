@@ -1,12 +1,18 @@
-import { ArrowLeft, GraduationCap, RotateCcw, Search } from 'lucide-react';
+import { BookOpen, GraduationCap, RotateCcw, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Board } from '../../components/Board';
+import { BoardLayout } from '../../components/BoardLayout';
+import { EngineLines } from '../../components/EngineLines';
+import { EvalBar } from '../../components/EvalBar';
+import { MoveLine } from '../../components/MoveLine';
+import { MoveVerdict } from '../../components/MoveVerdict';
+import { StepControls } from '../../components/StepControls';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
-import { getLinePositions, resolveMove } from '../../services/notation';
+import { getLinePositions, getSideToMove } from '../../services/notation';
 import {
   countLines,
   followSequence,
@@ -15,8 +21,21 @@ import {
   type OpeningBook,
   type OpeningNode,
 } from '../../services/openings';
+import { createMove } from '../../services/pgn';
 import { useTrainerTranslation } from '../../translations/hooks';
-import { formatMoveLine, formatMoveNumber } from '../../utilities/format';
+import { toBestMoveArrows } from '../../utilities/boardArrows';
+import { formatEval, formatMoveNumber } from '../../utilities/format';
+import { useStepKeys } from '../../utilities/useStepKeys';
+import {
+  EMPTY_LINE,
+  getShownMoves,
+  openLine,
+  playSan,
+  selectCursor,
+  stepLine,
+  type BrowseLine,
+} from './browseLine';
+import { useLineAnalysis } from './useLineAnalysis';
 
 const BOARD_ID = 'browse-board';
 const MAX_SEARCH_RESULTS = 8;
@@ -24,8 +43,8 @@ const TRAINEE_COLOR = 'black';
 
 interface BrowseModeProps {
   book: OpeningBook;
-  path: Array<string>;
-  onPathChange: (path: Array<string>) => void;
+  line: BrowseLine;
+  onLineChange: (line: BrowseLine) => void;
   onPractice: (lines: Array<Opening>) => void;
 }
 
@@ -41,123 +60,175 @@ interface LineSearchProps {
 
 export const BrowseMode: React.FC<BrowseModeProps> = ({
   book,
-  path,
-  onPathChange,
+  line,
+  onLineChange,
   onPractice,
 }) => {
   const { t } = useTrainerTranslation();
-  const [rejectedSan, setRejectedSan] = useState<string | undefined>();
-  const positions = useMemo(() => getLinePositions(path), [path]);
+  const path = useMemo(() => getShownMoves(line), [line]);
+  const positions = useMemo(() => getLinePositions(line.moves), [line.moves]);
+  const fen = positions[line.cursor];
+  const {
+    shownMove,
+    label: shownLabel,
+    evaluation,
+    hasFailed: hasEngineFailed,
+  } = useLineAnalysis({
+    line,
+    positions,
+    bookLength: followSequence(book.root, line.moves).length,
+  });
   const nodes = followSequence(book.root, path);
-  const node = nodes[nodes.length - 1] ?? book.root;
-  const fen = positions[positions.length - 1];
+  const isInBook = nodes.length === path.length;
+  const node = isInBook ? nodes[nodes.length - 1] ?? book.root : undefined;
+  const lineToPractice = node?.opening;
   const opening = nodes.reduce<Opening | undefined>(
     (deepest, current) => current.opening ?? deepest,
     undefined
   );
 
-  const selectPath = (next: Array<string>): void => {
-    setRejectedSan(undefined);
-    onPathChange(next);
-  };
+  useStepKeys({ onStep: (delta) => onLineChange(stepLine(line, delta)) });
 
   const handleMove = (from: string, to: string): boolean => {
-    const move = resolveMove(fen, from, to);
-    if (!move) {
-      return false;
+    const move = createMove(fen, from, to, path.length + 1);
+    if (move) {
+      onLineChange(playSan(line, move.san));
     }
-    if (!node.children.has(move.san)) {
-      setRejectedSan(move.san);
-      return false;
-    }
-    selectPath([...path, move.san]);
-    return true;
+    return move !== undefined;
   };
 
   return (
-    <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_26rem]'>
-      <div className='mx-auto flex w-full max-w-[38rem] flex-col gap-3'>
+    <BoardLayout
+      evalBar={
+        <EvalBar
+          evaluation={evaluation}
+          orientation={TRAINEE_COLOR}
+          isPending={!hasEngineFailed}
+        />
+      }
+      board={
         <Board
           id={BOARD_ID}
           fen={fen}
           orientation={TRAINEE_COLOR}
-          movableColor={path.length % 2 === 0 ? 'white' : 'black'}
+          arrows={toBestMoveArrows(evaluation)}
+          movableColor={getSideToMove(fen)}
           onMove={handleMove}
         />
-        <p className='min-h-5 text-sm text-muted-foreground' role='status'>
-          {rejectedSan
-            ? t('MoveNotInBook', { move: rejectedSan })
-            : t('BrowseBoardHint')}
-        </p>
-      </div>
-      <div className='flex flex-col gap-4'>
-        <Card>
-          <CardContent className='flex flex-col gap-3'>
-            <div className='flex flex-col gap-1.5'>
-              <div className='flex items-center gap-2'>
-                {opening && (
-                  <Badge variant='outline' className='font-mono'>
-                    {opening.eco}
-                  </Badge>
-                )}
-                <h2 className='text-base font-semibold'>
-                  {opening?.name ?? t('StartingPosition')}
-                </h2>
-              </div>
-              <p className='font-mono text-xs text-muted-foreground'>
-                {path.length > 0 ? formatMoveLine(path, 1) : t('NoMovesYet')}
-              </p>
-            </div>
-            <div className='flex flex-wrap gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                disabled={path.length === 0}
-                onClick={() => selectPath(path.slice(0, -1))}
-              >
-                <ArrowLeft />
-                {t('Back')}
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                disabled={path.length === 0}
-                onClick={() => selectPath([])}
-              >
-                <RotateCcw />
-                {t('Reset')}
-              </Button>
-              {node.opening && (
-                <Button
-                  size='sm'
-                  onClick={() => node.opening && onPractice([node.opening])}
-                >
-                  <GraduationCap />
-                  {t('PracticeThisLine')}
-                </Button>
+      }
+      controls={
+        <StepControls
+          canStepBack={line.cursor > 0}
+          canStepForward={line.cursor < line.moves.length}
+          onStep={(delta) => onLineChange(stepLine(line, delta))}
+        />
+      }
+    >
+      <Card className='shrink-0'>
+        <CardContent className='flex flex-col gap-3 p-3'>
+          <div className='flex flex-col gap-1.5'>
+            <div className='flex flex-wrap items-center gap-2'>
+              {opening && (
+                <Badge variant='outline' className='font-mono'>
+                  {opening.eco}
+                </Badge>
               )}
+              <h2 className='text-base font-semibold'>
+                {opening?.name ?? t('StartingPosition')}
+              </h2>
+              {!isInBook && <Badge variant='muted'>{t('OutOfBook')}</Badge>}
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='flex flex-col gap-3'>
-            <h3 className='text-sm font-medium'>{t('Continuations')}</h3>
+            {line.moves.length > 0 ? (
+              <MoveLine
+                aria-label={t('LineMoves')}
+                sans={line.moves}
+                firstPly={1}
+                cursor={line.cursor}
+                onSelectCursor={(cursor) =>
+                  onLineChange(selectCursor(line, cursor))
+                }
+              />
+            ) : (
+              <p className='font-mono text-xs text-muted-foreground'>
+                {t('NoMovesYet')}
+              </p>
+            )}
+          </div>
+          {shownMove && (
+            <MoveVerdict
+              move={shownMove}
+              label={shownLabel}
+              isPending={!hasEngineFailed}
+            />
+          )}
+          <div className='flex flex-wrap gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              disabled={line.moves.length === 0}
+              onClick={() => onLineChange(EMPTY_LINE)}
+            >
+              <RotateCcw />
+              {t('Reset')}
+            </Button>
+            {!isInBook && (
+              <Button
+                size='sm'
+                onClick={() => onLineChange(selectCursor(line, nodes.length))}
+              >
+                <BookOpen />
+                {t('BackToBook')}
+              </Button>
+            )}
+            {lineToPractice && (
+              <Button size='sm' onClick={() => onPractice([lineToPractice])}>
+                <GraduationCap />
+                {t('PracticeThisLine')}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className='shrink-0'>
+        <CardContent className='flex flex-col gap-3 p-3'>
+          <div className='flex items-center justify-between gap-3'>
+            <h3 className='text-sm font-medium'>{t('Engine')}</h3>
+            <span className='font-mono text-sm font-medium tabular-nums'>
+              {formatEval(evaluation)}
+            </span>
+          </div>
+          <EngineLines
+            fen={fen}
+            ply={path.length}
+            evaluation={evaluation}
+            hasFailed={hasEngineFailed}
+          />
+        </CardContent>
+      </Card>
+      <Card className='lg:flex lg:min-h-28 lg:flex-1 lg:flex-col'>
+        <CardContent className='flex flex-col gap-3 p-3 lg:min-h-0 lg:flex-1'>
+          <h3 className='text-sm font-medium'>{t('Continuations')}</h3>
+          {node ? (
             <ContinuationList
               node={node}
-              onSelect={(san) => selectPath([...path, san])}
+              onSelect={(san) => onLineChange(playSan(line, san))}
             />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <LineSearch
-              openings={book.openings}
-              onSelect={(selected) => selectPath(selected.moves)}
-            />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          ) : (
+            <p className='text-sm text-muted-foreground'>
+              {t('NoTheoryFromHere')}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+      <Card className='shrink-0'>
+        <CardContent className='p-3'>
+          <LineSearch
+            openings={book.openings}
+            onSelect={(selected) => onLineChange(openLine(selected.moves))}
+          />
+        </CardContent>
+      </Card>
+    </BoardLayout>
   );
 };
 
@@ -179,7 +250,7 @@ const ContinuationList: React.FC<ContinuationListProps> = ({
   }
 
   return (
-    <ul className='flex max-h-80 flex-col gap-1 overflow-y-auto'>
+    <ul className='flex max-h-80 flex-col gap-1 overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1'>
       {continuations.map(({ child, lineCount, name }) => (
         <li key={child.san}>
           <button

@@ -28,7 +28,7 @@ export const App: React.FC = () => {
     <TooltipProvider>
       <div className='flex min-h-dvh flex-col'>
         <AppHeader route={route} />
-        <main className='mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6'>
+        <main className='mx-auto w-full max-w-7xl flex-1 px-4 py-(--page-gutter) sm:px-6'>
           <Suspense>
             <Page route={route} />
           </Suspense>

@@ -1,10 +1,14 @@
 const MULTI_THREADED_ENGINE_PATH = 'engine/stockfish-lite.js';
 const SINGLE_THREADED_ENGINE_PATH = 'engine/stockfish-lite-single.js';
 const HANDSHAKE_TIMEOUT_MS = 30_000;
+const DEFAULT_ENGINE_NAME = 'Stockfish';
+const ENGINE_NAME_PREFIX = 'id name ';
+const WEBKIT_ONLY_BROWSER =
+  /^(?!.*(?:Chrome|Chromium|Edg|Android)).*AppleWebKit/;
 const INFO_PATTERN =
   /^info .*?\bdepth (\d+) .*?\bmultipv (\d+) .*?\bscore (cp|mate) (-?\d+)(?: (lowerbound|upperbound))? .*?\bpv (.+)$/;
 
-interface EngineOptions {
+export interface EngineOptions {
   threads: number;
   hashMb: number;
   multiPv: number;
@@ -18,21 +22,32 @@ export interface SearchLine {
   pv: Array<string>;
 }
 
+interface SearchParams {
+  depth: number;
+  signal: AbortSignal;
+}
+
 export interface Engine {
+  readonly name: string;
   readonly isMultiThreaded: boolean;
   configure: (options: EngineOptions) => Promise<void>;
   startNewGame: () => Promise<void>;
-  search: (fen: string, depth: number) => Promise<Array<SearchLine>>;
-  stop: () => void;
+  search: (fen: string, params: SearchParams) => Promise<Array<SearchLine>>;
   terminate: () => void;
 }
 
 type LineHandler = (line: string) => void;
 
+/*
+ * Safari and every browser on iOS run on WebKit. There the multi-threaded
+ * build is slower than a single thread and can stop answering in the middle of
+ * a search, so those browsers always get the single-threaded engine.
+ */
 export function isMultiThreadingAvailable(): boolean {
   return (
     typeof SharedArrayBuffer !== 'undefined' &&
-    globalThis.crossOriginIsolated === true
+    globalThis.crossOriginIsolated === true &&
+    !WEBKIT_ONLY_BROWSER.test(globalThis.navigator?.userAgent ?? '')
   );
 }
 
@@ -62,6 +77,7 @@ export function parseInfoLine(line: string): SearchLine | undefined {
 }
 
 class WorkerEngine implements Engine {
+  name = DEFAULT_ENGINE_NAME;
   private queue: Promise<unknown> = Promise.resolve();
   private handleLine: LineHandler | undefined;
   private handleFailure: ((error: Error) => void) | undefined;
@@ -82,7 +98,16 @@ class WorkerEngine implements Engine {
 
   initialize(): Promise<void> {
     return this.enqueue(() =>
-      this.request(['uci'], (line) => line === 'uciok', HANDSHAKE_TIMEOUT_MS)
+      this.request(
+        ['uci'],
+        (line) => {
+          if (line.startsWith(ENGINE_NAME_PREFIX)) {
+            this.name = line.slice(ENGINE_NAME_PREFIX.length);
+          }
+          return line === 'uciok';
+        },
+        HANDSHAKE_TIMEOUT_MS
+      )
     );
   }
 
@@ -106,25 +131,41 @@ class WorkerEngine implements Engine {
     );
   }
 
-  search(fen: string, depth: number): Promise<Array<SearchLine>> {
+  /*
+   * Searches run one after another, so a search can be cancelled while it is
+   * still waiting in the queue. It then never starts; a search that is already
+   * running is told to stop and resolves with what it has found so far.
+   */
+  search(
+    fen: string,
+    { depth, signal }: SearchParams
+  ): Promise<Array<SearchLine>> {
     return this.enqueue(async () => {
+      if (signal.aborted) {
+        return [];
+      }
       const lines = new Map<number, SearchLine>();
-      await this.request(
-        [`position fen ${fen}`, `go depth ${depth}`],
-        (line) => {
-          const parsed = parseInfoLine(line);
-          if (parsed) {
-            lines.set(parsed.multiPv, parsed);
-          }
-          return line.startsWith('bestmove');
-        }
-      );
-      return [...lines.values()].sort((a, b) => a.multiPv - b.multiPv);
-    });
-  }
+      const getLines = (): Array<SearchLine> =>
+        [...lines.values()].sort((a, b) => a.multiPv - b.multiPv);
+      const stopSearch = (): void => this.worker.postMessage('stop');
 
-  stop(): void {
-    this.worker.postMessage('stop');
+      signal.addEventListener('abort', stopSearch, { once: true });
+      try {
+        await this.request(
+          [`position fen ${fen}`, `go depth ${depth}`],
+          (line) => {
+            const parsed = parseInfoLine(line);
+            if (parsed) {
+              lines.set(parsed.multiPv, parsed);
+            }
+            return line.startsWith('bestmove');
+          }
+        );
+      } finally {
+        signal.removeEventListener('abort', stopSearch);
+      }
+      return getLines();
+    });
   }
 
   terminate(): void {

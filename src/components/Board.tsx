@@ -6,6 +6,7 @@ import {
 } from 'react-chessboard';
 
 import type { PlayerColor } from '../services/evaluation';
+import { getPieceColor } from '../services/notation';
 
 const ANIMATION_DURATION_MS = 200;
 const HIGHLIGHT_STRENGTH = '45%';
@@ -51,9 +52,6 @@ export const Board: React.FC<BoardProps> = ({
   const selectedSquare = selection?.fen === fen ? selection.square : undefined;
   const isInteractive = movableColor !== undefined && onMove !== undefined;
 
-  const isMovablePiece = (pieceType: string | undefined): boolean =>
-    isInteractive && pieceType?.[0] === movableColor[0];
-
   const handleDrop = ({
     sourceSquare,
     targetSquare,
@@ -64,23 +62,18 @@ export const Board: React.FC<BoardProps> = ({
     );
   };
 
-  const handleSquareClick = ({ square, piece }: SquareHandlerArgs): void => {
+  const handleSquareClick = ({ square }: SquareHandlerArgs): void => {
     if (!isInteractive) {
       return;
     }
+    const isOwnPiece = getPieceColor(fen, square) === movableColor;
     if (selectedSquare && selectedSquare !== square) {
       const isMoved = onMove(selectedSquare, square);
-      setSelection(
-        !isMoved && isMovablePiece(piece?.pieceType)
-          ? { square, fen }
-          : undefined
-      );
+      setSelection(!isMoved && isOwnPiece ? { square, fen } : undefined);
       return;
     }
     setSelection(
-      selectedSquare === square || !isMovablePiece(piece?.pieceType)
-        ? undefined
-        : { square, fen }
+      selectedSquare === square || !isOwnPiece ? undefined : { square, fen }
     );
   };
 
@@ -102,7 +95,8 @@ export const Board: React.FC<BoardProps> = ({
           boardOrientation: orientation,
           animationDurationInMs: ANIMATION_DURATION_MS,
           allowDragging: isInteractive,
-          canDragPiece: ({ piece }) => isMovablePiece(piece.pieceType),
+          canDragPiece: ({ piece }) =>
+            isInteractive && piece.pieceType[0] === movableColor[0],
           onPieceDrop: handleDrop,
           onSquareClick: handleSquareClick,
           arrows: arrows.map(({ from, to, color }) => ({
