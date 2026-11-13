@@ -1,0 +1,11 @@
+node_modules
+dist
+.cache
+.eslintcache
+*.tsbuildinfo
+*.local
+.DS_Store
+
+# copied from node_modules by scripts/copyEngineAssets.mjs
+public/engine
+public/coi-serviceworker.js

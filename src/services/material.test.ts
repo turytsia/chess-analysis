@@ -1,0 +1,94 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  GamePhase,
+  getMovePhases,
+  getSacrificedMaterial,
+  isRecapture,
+} from './material';
+import { parsePgn } from './pgn';
+
+describe('material', () => {
+  describe('getSacrificedMaterial', () => {
+    it('should count a bishop given up for a pawn as two points', () => {
+      const { moves } = parsePgn(
+        '[SetUp "1"]\n[FEN "6k1/5ppp/8/8/8/3B4/5PPP/6K1 w - - 0 1"]\n\n1. Bxh7+ *'
+      );
+
+      expect(getSacrificedMaterial(moves[0])).toBe(2);
+    });
+
+    it('should count a queen left en prise as nine points', () => {
+      const { moves } = parsePgn(
+        '[SetUp "1"]\n[FEN "6k1/5ppp/8/8/8/8/1q3PPP/3Q2K1 w - - 0 1"]\n\n1. Qd2 *'
+      );
+
+      expect(getSacrificedMaterial(moves[0])).toBe(9);
+    });
+
+    it('should not count a defended piece as a sacrifice', () => {
+      const { moves } = parsePgn('1. e4 e5 2. Nf3 Nc6 3. Bb5 *');
+
+      expect(getSacrificedMaterial(moves[4])).toBe(0);
+    });
+
+    it('should not count an even trade as a sacrifice', () => {
+      const { moves } = parsePgn(
+        '[SetUp "1"]\n[FEN "3r2k1/3r1ppp/8/8/8/8/3R1PPP/3R2K1 w - - 0 1"]\n\n1. Rxd7 *'
+      );
+
+      expect(getSacrificedMaterial(moves[0])).toBeLessThanOrEqual(0);
+    });
+
+    it('should not count material offered by a move that ends the game', () => {
+      const { moves } = parsePgn(
+        '[SetUp "1"]\n[FEN "6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1"]\n\n1. Rd8# *'
+      );
+
+      expect(getSacrificedMaterial(moves[0])).toBe(0);
+    });
+  });
+
+  describe('isRecapture', () => {
+    it('should be true when a piece is taken back on the same square', () => {
+      const { moves } = parsePgn('1. e4 d5 2. exd5 Qxd5 *');
+
+      expect(isRecapture(moves[3], moves[2])).toBe(true);
+    });
+
+    it('should be false for a capture that does not answer a capture', () => {
+      const { moves } = parsePgn('1. e4 d5 2. exd5 Qxd5 *');
+
+      expect(isRecapture(moves[2], moves[1])).toBe(false);
+    });
+  });
+
+  describe('getMovePhases', () => {
+    it('should start in the opening', () => {
+      const { moves } = parsePgn('1. e4 e5 2. Nf3 Nc6 *');
+
+      expect(getMovePhases(moves)).toEqual([
+        GamePhase.Opening,
+        GamePhase.Opening,
+        GamePhase.Opening,
+        GamePhase.Opening,
+      ]);
+    });
+
+    it('should reach the endgame once few pieces are left and stay there', () => {
+      const { moves } = parsePgn(
+        '[SetUp "1"]\n[FEN "3r2k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1"]\n\n1. Rxd8# *'
+      );
+
+      expect(getMovePhases(moves)).toEqual([GamePhase.Endgame]);
+    });
+
+    it('should leave the opening when a back rank is nearly empty', () => {
+      const { moves } = parsePgn(
+        '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. Nc3 Nf6 5. d3 d6 6. Be3 Be6 7. Qe2 Qe7 8. O-O-O *'
+      );
+
+      expect(getMovePhases(moves).at(-1)).toBe(GamePhase.Middlegame);
+    });
+  });
+});

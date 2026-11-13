@@ -1,0 +1,21 @@
+{
+  "AppName": "Chess Analysis",
+  "Black": "Black",
+  "Blitz": "Blitz",
+  "Bullet": "Bullet",
+  "Cancel": "Cancel",
+  "Close": "Close",
+  "Daily": "Daily",
+  "Games": "Games",
+  "MainNavigation": "Main navigation",
+  "Moves": "Moves",
+  "Opening": "Opening",
+  "Rapid": "Rapid",
+  "StartingPosition": "Starting position",
+  "ThemeDark": "Theme: dark",
+  "ThemeLight": "Theme: light",
+  "ThemeSystem": "Theme: system",
+  "Trainer": "Trainer",
+  "UnknownTimeControl": "Unknown",
+  "White": "White"
+}
