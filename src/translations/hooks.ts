@@ -13,10 +13,3 @@ export function useAnalysisTranslation(): UseTranslationResponse<
 > {
   return useTranslation('analysis');
 }
-
-export function useTrainerTranslation(): UseTranslationResponse<
-  'trainer',
-  undefined
-> {
-  return useTranslation('trainer');
-}

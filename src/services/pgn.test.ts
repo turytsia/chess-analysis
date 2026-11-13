@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createMove, getPositions, parsePgn, playLine, splitPgn } from './pgn';
+import { createMove, getPositions, parsePgn, splitPgn } from './pgn';
 
 describe('pgn', () => {
   describe('parsePgn', () => {
@@ -70,18 +70,6 @@ describe('pgn', () => {
 
     it('should return nothing for an illegal move', () => {
       expect(createMove(START, 'e2', 'e5', 1)).toBeUndefined();
-    });
-  });
-
-  describe('playLine', () => {
-    it('should replay a line of moves the same way a parsed game does', () => {
-      expect(playLine(['e4', 'c6', 'd4'])).toEqual(
-        parsePgn('1. e4 c6 2. d4 *').moves
-      );
-    });
-
-    it('should return no moves for an empty line', () => {
-      expect(playLine([])).toEqual([]);
     });
   });
 

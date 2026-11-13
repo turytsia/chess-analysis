@@ -2,7 +2,7 @@ import { Chess, type Move, type PieceSymbol, type Square } from 'chess.js';
 
 import type { GameMove } from './pgn';
 
-const PIECE_VALUES: Record<PieceSymbol, number> = {
+export const PIECE_VALUES: Record<PieceSymbol, number> = {
   p: 1,
   n: 3,
   b: 3,
@@ -28,21 +28,30 @@ interface Exchange {
   pieces: number;
 }
 
+interface PieceAtRisk extends Exchange {
+  piece: PieceSymbol;
+  square: Square;
+}
+
+interface Sacrifice {
+  piece: PieceSymbol;
+  square: Square;
+  material: number;
+}
+
 /*
- * Net material the mover gives up, in pawn units. After the move the
- * opponent's best static exchange is found for every mover's piece, and
- * whatever the move itself captured is subtracted, so an even trade comes out
- * as zero and a real sacrifice as a positive number. Only a deficit in pieces
- * counts: a knight for two pawns is a sacrifice of one point, while trading
- * rooks and losing a pawn on the way is not a sacrifice at all.
+ * The piece the mover gives up and how much material that costs, in pawn
+ * units. After the move the opponent's best static exchange is found for every
+ * mover's piece, and whatever the move itself captured is subtracted, so an
+ * even trade is no sacrifice. Only a deficit in pieces counts: a knight for
+ * two pawns is a sacrifice of one point, while trading rooks and losing a pawn
+ * on the way is not a sacrifice at all.
  */
-export function getSacrificedMaterial(move: GameMove): number {
-  const chess = new Chess(move.fenAfter);
-  if (chess.isGameOver()) {
-    return 0;
+export function getSacrifice(move: GameMove): Sacrifice | undefined {
+  if (new Chess(move.fenAfter).isGameOver()) {
+    return undefined;
   }
 
-  const moverColor = move.color === 'white' ? 'w' : 'b';
   const taken: Exchange = {
     total:
       (move.captured ? PIECE_VALUES[move.captured] : 0) +
@@ -51,20 +60,60 @@ export function getSacrificedMaterial(move: GameMove): number {
       (move.captured ? getPieceValue(move.captured) : 0) +
       (move.promotion ? PIECE_VALUES[move.promotion] : 0),
   };
-  const sacrifices = chess
+  return getPiecesAtRisk(move.fenAfter)
+    .filter(({ pieces, total }) => pieces > taken.pieces && total > taken.total)
+    .map(({ piece, square, total }) => ({
+      piece,
+      square,
+      material: total - taken.total,
+    }))
+    .reduce<Sacrifice | undefined>(
+      (largest, sacrifice) =>
+        largest && largest.material >= sacrifice.material ? largest : sacrifice,
+      undefined
+    );
+}
+
+/*
+ * Pieces of the side that is not to move which the side to move can win
+ * material on, judged by a static exchange on the piece's square. Pawns and
+ * the king are left out.
+ */
+export function getPiecesAtRisk(fen: string): Array<PieceAtRisk> {
+  const chess = new Chess(fen);
+  const owner = chess.turn() === 'w' ? 'b' : 'w';
+  const attackedSquares = new Set(
+    chess
+      .moves({ verbose: true })
+      .filter((move) => move.captured !== undefined)
+      .map((move) => move.to)
+  );
+  return chess
     .board()
     .flat()
-    .flatMap((piece) =>
-      piece !== null &&
-      piece.color === moverColor &&
-      piece.type !== 'p' &&
-      piece.type !== 'k'
-        ? [getExchange(chess, piece.square)]
-        : []
-    )
-    .filter(({ pieces }) => pieces > taken.pieces)
-    .map(({ total }) => total - taken.total);
-  return Math.max(0, ...sacrifices);
+    .flatMap((piece) => {
+      if (
+        piece === null ||
+        piece.color !== owner ||
+        piece.type === 'p' ||
+        piece.type === 'k' ||
+        !attackedSquares.has(piece.square)
+      ) {
+        return [];
+      }
+      const exchange = getExchange(chess, piece.square);
+      return exchange.total > 0
+        ? [{ piece: piece.type, square: piece.square, ...exchange }]
+        : [];
+    });
+}
+
+/*
+ * Material the side to move wins by starting an exchange on the square, or
+ * zero when capturing there does not pay.
+ */
+export function getExchangeGain(fen: string, square: string): number {
+  return getExchange(new Chess(fen), square as Square).total;
 }
 
 export function capturesLastMovedPiece(

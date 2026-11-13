@@ -11,11 +11,6 @@ const AnalysisView = lazy(() =>
     default: module.AnalysisView,
   }))
 );
-const OpeningTrainer = lazy(() =>
-  import('./features/trainer/OpeningTrainer').then((module) => ({
-    default: module.OpeningTrainer,
-  }))
-);
 
 interface PageProps {
   route: Route;
@@ -27,7 +22,7 @@ export const App: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex min-h-dvh flex-col'>
-        <AppHeader route={route} />
+        <AppHeader />
         <main className='mx-auto w-full max-w-7xl flex-1 px-4 py-(--page-gutter) sm:px-6'>
           <Suspense>
             <Page route={route} />
@@ -51,9 +46,6 @@ export const App: React.FC = () => {
 const Page: React.FC<PageProps> = ({ route }) => {
   if (route.name === 'game') {
     return <AnalysisView gameId={route.gameId} />;
-  }
-  if (route.name === 'trainer') {
-    return <OpeningTrainer view={route.view} />;
   }
   return <GameLibrary />;
 };

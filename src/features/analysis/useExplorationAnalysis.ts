@@ -1,9 +1,11 @@
 import { assessMoves, type MoveAssessment } from '../../services/classify';
+import { describeMove, type MoveRemark } from '../../services/commentary';
 import type { PositionEval } from '../../services/evaluation';
 import { useLiveEvals } from '../../utilities/useLiveEvals';
 import type { GameLine, NavigationState } from './exploration';
 
 const NO_FENS: Array<string> = [];
+const NO_REMARKS: Array<MoveRemark> = [];
 
 interface ExplorationAnalysisParams {
   game: GameLine;
@@ -14,6 +16,7 @@ interface ExplorationAnalysisParams {
 interface ExplorationAnalysis {
   evaluation: PositionEval | undefined;
   assessments: Array<MoveAssessment | undefined>;
+  remarks: Array<MoveRemark>;
   hasFailed: boolean;
 }
 
@@ -56,10 +59,25 @@ export function useExplorationAnalysis({
       }).slice(1)
     : assessMoves({ moves: variation, evals: lineEvals, bookPlies: 0 });
 
+  const exploredMove = variation[cursor - 1];
+  const assessment = assessments[cursor - 1];
+  const before = lineEvals[cursor - 1];
+  const after = lineEvals[cursor];
+
   return {
     evaluation:
       cursor > 0 ? evals[cursor - 1 + liveOffset] : storedBase ?? evals[0],
     assessments,
+    remarks:
+      exploredMove && assessment && before && after
+        ? describeMove({
+            move: exploredMove,
+            previousMove: variation[cursor - 2] ?? previousMove,
+            assessment,
+            before,
+            after,
+          })
+        : NO_REMARKS,
     hasFailed,
   };
 }

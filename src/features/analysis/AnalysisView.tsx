@@ -14,6 +14,7 @@ import {
   TabsTrigger,
 } from '../../components/ui/Tabs';
 import { isCriticalLabel } from '../../services/classify';
+import { describeMove } from '../../services/commentary';
 import { getGame, type StoredGame } from '../../services/db';
 import { getSideToMove } from '../../services/notation';
 import { getPositions, parsePgn } from '../../services/pgn';
@@ -97,6 +98,18 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
     ? exploration.assessments[cursor - 1]
     : report.assessments[ply - 1];
   const evaluation = isExploring ? exploration.evaluation : evals[ply];
+  const gameAssessment = report.assessments[ply - 1];
+  const evaluationBefore = evals[ply - 1];
+  const gameRemarks =
+    gameMove && gameAssessment && evaluationBefore && evals[ply]
+      ? describeMove({
+          move: gameMove,
+          previousMove: moves[ply - 2],
+          assessment: gameAssessment,
+          before: evaluationBefore,
+          after: evals[ply],
+        })
+      : [];
   const isEvaluationPending = isExploring
     ? !exploration.hasFailed
     : analysis.run !== undefined;
@@ -121,6 +134,7 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
   };
 
   const lastMove = exploredMove ?? gameMove;
+  const isOwnMove = lastMove?.color === game.userColor;
 
   return (
     <BoardPage fitsViewport>
@@ -182,6 +196,8 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
                 baseMove={gameMove}
                 variation={variation}
                 assessments={exploration.assessments}
+                remarks={exploration.remarks}
+                isOwnMove={isOwnMove}
                 cursor={cursor}
                 evaluation={evaluation}
                 hasEngineFailed={exploration.hasFailed}
@@ -193,7 +209,9 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
                 fen={fen}
                 ply={ply}
                 move={gameMove}
-                assessment={report.assessments[ply - 1]}
+                assessment={gameAssessment}
+                remarks={gameRemarks}
+                isOwnMove={isOwnMove}
                 evaluation={evaluation}
               />
             )}

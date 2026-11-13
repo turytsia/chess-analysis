@@ -87,7 +87,7 @@ There is no backend. The site must work from a sub-folder with no control over r
 
 #### Store data in the browser only
 
-- Games, analyses, fetched archives and trainer progress live in IndexedDB, behind the
+- Games, analyses and fetched archives live in IndexedDB, behind the
   functions exported by `src/services/db.ts`. No other module touches the database directly.
 - Settings, including the chess.com username the user typed in, live in `localStorage` through
   `src/stores/settingsStore.ts`. Games are only loaded after the user provides that input.
@@ -250,11 +250,11 @@ who meets it knows it is defined elsewhere. This matters most for exported const
 
 Don't:
 ```typescript
-export const leitnerBoxCount = 5;
+export const defaultDepth = 16;
 ```
 Do:
 ```typescript
-export const LEITNER_BOX_COUNT = 5;
+export const DEFAULT_DEPTH = 16;
 ```
 
 #### Export declarations at the point of definition
@@ -535,7 +535,7 @@ Do:
 #### Prefer feature namespaces for feature-specific strings
 
 A string used by a single feature goes into that feature's file (`en-library.json`,
-`en-analysis.json`, `en-trainer.json`) and is read through the feature's hook from
+`en-analysis.json`) and is read through the feature's hook from
 `src/translations/hooks.ts`. Shared components use `useTranslation()` and the main file,
 `en-translation.json`.
 

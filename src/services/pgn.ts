@@ -80,11 +80,6 @@ export function createMove(
   }
 }
 
-export function playLine(sans: Array<string>): Array<GameMove> {
-  const chess = new Chess();
-  return sans.map((san, index) => toGameMove(chess.move(san), index + 1));
-}
-
 export function getPositions(game: ParsedGame): Array<string> {
   return [game.startFen, ...game.moves.map((move) => move.fenAfter)];
 }

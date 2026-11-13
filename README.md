@@ -1,7 +1,7 @@
 # Chess Analysis
 
-Analyze your chess games with Stockfish in the browser and train your openings. Everything runs on
-your device: there is no backend and no account.
+Analyze your chess games with Stockfish in the browser. Everything runs on your device: there is
+no backend and no account.
 
 ## Features
 
@@ -19,11 +19,10 @@ your device: there is no backend and no account.
 - **Explore other moves.** Move the pieces at any point of a game to try a different line. The
   engine evaluates every position you reach and tells you how good your last move was, from Best
   to Blunder. The game's own moves stay untouched, and one click takes you back to them.
+- **Move comments.** Every analyzed move gets a short explanation written to you: what a good
+  move does, and what a weak move allows, such as a piece that can be taken, a checkmate, or a
+  fork a few moves later.
 - **Export.** Download any game as a PGN annotated with move labels and evaluations.
-- **Opening trainer.** Browse the Caro-Kann tree with names and ECO codes, keep playing beyond
-  the book with the engine evaluating each position and judging your last move, step back and
-  forward through the line you played, drill lines as Black with spaced repetition, and see where your own
-  games left theory.
 
 ## Getting started
 
@@ -76,7 +75,7 @@ Stockfish is slower there and can freeze in the middle of a search.
 
 ## Where your data lives
 
-- Games, analyses and trainer progress are stored in IndexedDB.
+- Games and analyses are stored in IndexedDB.
 - Settings and your chess.com username are stored in `localStorage`.
 
 Nothing leaves the browser except the requests to the public chess.com API. Clearing the site data
@@ -86,6 +85,9 @@ removes everything.
 
 - Move labels are derived from the change in winning chances. Brilliant and Great are heuristics
   and will not always match chess.com.
+- Move comments are produced by fixed rules from the engine's lines and the position, not by a
+  language model. They name what can be checked on the board; when no concrete reason is found
+  for a weak move, the comment only names the engine's reply.
 - Deeper analysis is more reliable and slower. Depth 16 is a good default; raise it for games you
   want to study closely.
 

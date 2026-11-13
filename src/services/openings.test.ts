@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  countLines,
   createOpeningBook,
-  followSequence,
-  getNodeName,
-  loadCaroKannBook,
   loadOpeningBook,
   matchOpening,
   toEpd,
@@ -76,48 +72,6 @@ describe('openings', () => {
     });
   });
 
-  describe('followSequence', () => {
-    it('should stop at the first move outside the tree', () => {
-      const { root } = createOpeningBook([CARO_KANN, SHORT_VARIATION]);
-
-      expect(
-        followSequence(root, ['e4', 'c6', 'd4', 'e6']).map(({ san }) => san)
-      ).toEqual(['e4', 'c6', 'd4']);
-    });
-  });
-
-  describe('getNodeName', () => {
-    const { root } = createOpeningBook([
-      CARO_KANN,
-      SHORT_VARIATION,
-      TAL_VARIATION,
-    ]);
-
-    it('should use the own name of a named position', () => {
-      const [, caroKann] = followSequence(root, ['e4', 'c6']);
-
-      expect(getNodeName(caroKann)).toBe('Caro-Kann Defense');
-    });
-
-    it('should describe an unnamed position by what its lines share', () => {
-      const path = followSequence(root, ['e4', 'c6', 'd4', 'd5', 'e5', 'Bf5']);
-
-      expect(getNodeName(path[5])).toBe('Caro-Kann Defense: Advance Variation');
-    });
-  });
-
-  describe('countLines', () => {
-    it('should count every named line at or below a position', () => {
-      const { root } = createOpeningBook([
-        CARO_KANN,
-        SHORT_VARIATION,
-        TAL_VARIATION,
-      ]);
-
-      expect(countLines(root)).toBe(3);
-    });
-  });
-
   describe('toEpd', () => {
     it('should drop the move counters from a FEN', () => {
       expect(
@@ -135,17 +89,6 @@ describe('openings', () => {
         eco: 'B13',
         name: 'Caro-Kann Defense: Panov Attack',
       });
-    });
-
-    it('should limit the trainer book to Caro-Kann lines', async () => {
-      const book = await loadCaroKannBook();
-
-      expect(book.openings.length).toBeGreaterThan(100);
-      expect(
-        book.openings.every(
-          ({ moves }) => moves[0] === 'e4' && moves[1] === 'c6'
-        )
-      ).toBe(true);
     });
   });
 });

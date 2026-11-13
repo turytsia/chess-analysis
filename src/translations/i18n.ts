@@ -3,7 +3,6 @@ import { initReactI18next } from 'react-i18next';
 
 import analysis from './namespaces/en-analysis.json';
 import library from './namespaces/en-library.json';
-import trainer from './namespaces/en-trainer.json';
 import translation from './namespaces/en-translation.json';
 
 const MAIN_NAMESPACE = 'translation';
@@ -14,7 +13,7 @@ export function initializeI18n(): void {
     fallbackLng: 'en',
     defaultNS: MAIN_NAMESPACE,
     fallbackNS: MAIN_NAMESPACE,
-    resources: { en: { translation, library, analysis, trainer } },
+    resources: { en: { translation, library, analysis } },
     interpolation: { escapeValue: false },
   });
 }

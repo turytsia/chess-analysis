@@ -13,7 +13,7 @@ import {
   GamePhase,
   getMovePhases,
   capturesLastMovedPiece,
-  getSacrificedMaterial,
+  getSacrifice,
 } from './material';
 import type { GameMove } from './pgn';
 
@@ -247,7 +247,7 @@ function isBrilliant({
     getAlternativeWin(before, move.uci, move.color) ?? winBefore;
   return (
     alternativeWin <= THRESHOLDS.brilliantMaxAlternativeWin &&
-    getSacrificedMaterial(move) >= THRESHOLDS.brilliantMinSacrifice
+    (getSacrifice(move)?.material ?? 0) >= THRESHOLDS.brilliantMinSacrifice
   );
 }
 

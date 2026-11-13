@@ -1,7 +1,6 @@
 import { Dexie, type EntityTable, type Table } from 'dexie';
 
 import type { PlayerColor, PositionEval, SideValues } from './evaluation';
-import type { LineProgress } from './leitner';
 
 const DATABASE_NAME = 'chessAnalysis';
 const DATABASE = createDatabase();
@@ -107,14 +106,6 @@ export async function markArchiveFetched(id: string): Promise<void> {
   await archivesTable().put({ id, fetchedAt: Date.now() });
 }
 
-export function listLineProgress(): Promise<Array<LineProgress>> {
-  return lineProgressTable().toArray();
-}
-
-export async function saveLineProgress(progress: LineProgress): Promise<void> {
-  await lineProgressTable().put(progress);
-}
-
 function createDatabase(): Dexie {
   const instance = new Dexie(DATABASE_NAME);
   instance.version(1).stores({
@@ -125,6 +116,7 @@ function createDatabase(): Dexie {
     lineProgress: 'lineId',
   });
   instance.version(2).stores({ notes: null });
+  instance.version(3).stores({ lineProgress: null });
   return instance;
 }
 
@@ -138,8 +130,4 @@ function analysesTable(): Table<StoredAnalysis, [string, number, number]> {
 
 function archivesTable(): EntityTable<StoredArchive, 'id'> {
   return DATABASE.table('archives');
-}
-
-function lineProgressTable(): EntityTable<LineProgress, 'lineId'> {
-  return DATABASE.table('lineProgress');
 }

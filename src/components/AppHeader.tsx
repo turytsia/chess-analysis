@@ -2,8 +2,7 @@ import { ChessKnight, Monitor, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useSettingsStore, type Theme } from '../stores/settingsStore';
-import { cn } from '../utilities/cn';
-import { toHref, type Route } from '../utilities/router';
+import { toHref } from '../utilities/router';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
 
@@ -18,17 +17,7 @@ const THEME_ICONS = {
   dark: Moon,
 } as const;
 
-interface AppHeaderProps {
-  route: Route;
-}
-
-interface NavLinkProps {
-  href: string;
-  isActive: boolean;
-  children: React.ReactNode;
-}
-
-export const AppHeader: React.FC<AppHeaderProps> = ({ route }) => {
+export const AppHeader: React.FC = () => {
   const { t } = useTranslation();
 
   return (
@@ -43,23 +32,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ route }) => {
           </span>
           {t('AppName')}
         </a>
-        <nav
-          aria-label={t('MainNavigation')}
-          className='flex items-center gap-4'
-        >
-          <NavLink
-            href={toHref({ name: 'library' })}
-            isActive={route.name !== 'trainer'}
-          >
-            {t('Games')}
-          </NavLink>
-          <NavLink
-            href={toHref({ name: 'trainer', view: 'browse' })}
-            isActive={route.name === 'trainer'}
-          >
-            {t('Trainer')}
-          </NavLink>
-        </nav>
         <div className='ml-auto'>
           <ThemeToggle />
         </div>
@@ -67,19 +39,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ route }) => {
     </header>
   );
 };
-
-const NavLink: React.FC<NavLinkProps> = ({ href, isActive, children }) => (
-  <a
-    href={href}
-    aria-current={isActive ? 'page' : undefined}
-    className={cn(
-      'rounded-sm text-sm transition-colors outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
-      isActive ? 'font-medium text-foreground' : 'text-muted-foreground'
-    )}
-  >
-    {children}
-  </a>
-);
 
 const ThemeToggle: React.FC = () => {
   const { t } = useTranslation();

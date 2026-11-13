@@ -4,11 +4,6 @@ import type { PlayerColor } from './evaluation';
 
 const SQUARE_PATTERN = /^[a-h][1-8]$/;
 
-interface MoveSquares {
-  from: string;
-  to: string;
-}
-
 interface LegalTarget {
   square: string;
   isOccupied: boolean;
@@ -35,23 +30,6 @@ export function toSanLine(
     }
   }
   return sans;
-}
-
-export function getLinePositions(sans: Array<string>): Array<string> {
-  const chess = new Chess();
-  return [chess.fen(), ...sans.map((san) => chess.move(san).after)];
-}
-
-export function getMoveSquares(
-  fen: string,
-  san: string
-): MoveSquares | undefined {
-  try {
-    const { from, to } = new Chess(fen).move(san);
-    return { from, to };
-  } catch {
-    return undefined;
-  }
 }
 
 export function getSideToMove(fen: string): PlayerColor {

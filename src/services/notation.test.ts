@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getLegalTargets,
-  getLinePositions,
-  getMoveSquares,
   getPieceColor,
   getSideToMove,
   toSanLine,
@@ -23,22 +21,6 @@ describe('notation', () => {
 
     it('should stop at the first move that cannot be played', () => {
       expect(toSanLine(START, ['e2e4', 'e2e4', 'd2d4'], 8)).toEqual(['e4']);
-    });
-  });
-
-  describe('getLinePositions', () => {
-    it('should return the start position and one position per move', () => {
-      expect(getLinePositions(['e4'])).toEqual([START, AFTER_E4]);
-    });
-  });
-
-  describe('getMoveSquares', () => {
-    it('should find the squares a move goes from and to', () => {
-      expect(getMoveSquares(START, 'Nf3')).toEqual({ from: 'g1', to: 'f3' });
-    });
-
-    it('should return nothing for a move that cannot be played', () => {
-      expect(getMoveSquares(START, 'Nf6')).toBeUndefined();
     });
   });
 

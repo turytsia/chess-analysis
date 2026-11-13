@@ -1,10 +1,6 @@
-const CARO_KANN_FIRST_ECO = 'B10';
-const CARO_KANN_LAST_ECO = 'B19';
 const TRANSPOSITION_MAX_PLY = 40;
-const NAME_PART_SEPARATOR = /: |, /;
 
 let openingBookPromise: Promise<OpeningBook> | undefined;
-let caroKannBookPromise: Promise<OpeningBook> | undefined;
 
 export interface Opening {
   id: string;
@@ -14,7 +10,7 @@ export interface Opening {
   epd: string;
 }
 
-export interface OpeningNode {
+interface OpeningNode {
   san: string;
   ply: number;
   opening: Opening | undefined;
@@ -104,7 +100,7 @@ export function matchOpening(
   );
 }
 
-export function followSequence(
+function followSequence(
   root: OpeningNode,
   sans: Array<string>
 ): Array<OpeningNode> {
@@ -120,56 +116,8 @@ export function followSequence(
   return path;
 }
 
-export function loadCaroKannBook(): Promise<OpeningBook> {
-  caroKannBookPromise ??= loadOpeningBook().then((book) =>
-    createOpeningBook(
-      book.openings.filter(
-        ({ eco }) => eco >= CARO_KANN_FIRST_ECO && eco <= CARO_KANN_LAST_ECO
-      )
-    )
-  );
-  return caroKannBookPromise;
-}
-
-/*
- * Many tree nodes sit between two named openings. Such a node is described by
- * what all named lines below it have in common, e.g. every line after
- * 3... Bf5 in the Advance shares "Caro-Kann Defense: Advance Variation".
- */
-export function getNodeName(node: OpeningNode): string | undefined {
-  if (node.opening) {
-    return node.opening.name;
-  }
-  const [first, ...others] = collectOpenings(node).map(({ name }) =>
-    name.split(NAME_PART_SEPARATOR)
-  );
-  if (!first) {
-    return undefined;
-  }
-  const mismatch = first.findIndex((part, index) =>
-    others.some((parts) => parts[index] !== part)
-  );
-  const [family, ...variations] =
-    mismatch === -1 ? first : first.slice(0, mismatch);
-  if (family === undefined) {
-    return undefined;
-  }
-  return variations.length > 0 ? `${family}: ${variations.join(', ')}` : family;
-}
-
-export function countLines(node: OpeningNode): number {
-  return collectOpenings(node).length;
-}
-
 export function toEpd(fen: string): string {
   return fen.split(' ').slice(0, 4).join(' ');
-}
-
-function collectOpenings(node: OpeningNode): Array<Opening> {
-  return [
-    ...(node.opening ? [node.opening] : []),
-    ...[...node.children.values()].flatMap(collectOpenings),
-  ];
 }
 
 function createNode(san: string, ply: number): OpeningNode {

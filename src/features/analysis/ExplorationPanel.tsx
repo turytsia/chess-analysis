@@ -6,10 +6,12 @@ import { MoveVerdict } from '../../components/MoveVerdict';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import type { MoveAssessment } from '../../services/classify';
+import type { MoveRemark } from '../../services/commentary';
 import type { PositionEval } from '../../services/evaluation';
 import type { GameMove } from '../../services/pgn';
 import { useAnalysisTranslation } from '../../translations/hooks';
 import { formatEval, formatMoveNumber } from '../../utilities/format';
+import { MoveComment } from './MoveComment';
 
 interface ExplorationPanelProps {
   fen: string;
@@ -17,6 +19,8 @@ interface ExplorationPanelProps {
   baseMove: GameMove | undefined;
   variation: Array<GameMove>;
   assessments: Array<MoveAssessment | undefined>;
+  remarks: Array<MoveRemark>;
+  isOwnMove: boolean;
   cursor: number;
   evaluation: PositionEval | undefined;
   hasEngineFailed: boolean;
@@ -30,6 +34,8 @@ export const ExplorationPanel: React.FC<ExplorationPanelProps> = ({
   baseMove,
   variation,
   assessments,
+  remarks,
+  isOwnMove,
   cursor,
   evaluation,
   hasEngineFailed,
@@ -80,6 +86,7 @@ export const ExplorationPanel: React.FC<ExplorationPanelProps> = ({
           {formatEval(evaluation)}
         </span>
       </div>
+      <MoveComment remarks={remarks} isOwnMove={isOwnMove} />
       <EngineLines
         fen={fen}
         ply={basePly + cursor}

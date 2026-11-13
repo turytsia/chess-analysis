@@ -1,17 +1,21 @@
 import { EngineLines } from '../../components/EngineLines';
 import type { MoveAssessment } from '../../services/classify';
+import type { MoveRemark } from '../../services/commentary';
 import type { PositionEval } from '../../services/evaluation';
 import type { GameMove } from '../../services/pgn';
 import { useAnalysisTranslation } from '../../translations/hooks';
 import { formatEval, formatMoveNumber } from '../../utilities/format';
 import { MoveLabelIcon } from '../../components/MoveLabelIcon';
 import { useLocalizeMoveLabel } from '../../utilities/useLocalizeMoveLabel';
+import { MoveComment } from './MoveComment';
 
 interface MoveInsightProps {
   fen: string;
   ply: number;
   move: GameMove | undefined;
   assessment: MoveAssessment | undefined;
+  remarks: Array<MoveRemark>;
+  isOwnMove: boolean;
   evaluation: PositionEval | undefined;
 }
 
@@ -20,6 +24,8 @@ export const MoveInsight: React.FC<MoveInsightProps> = ({
   ply,
   move,
   assessment,
+  remarks,
+  isOwnMove,
   evaluation,
 }) => {
   const { t } = useAnalysisTranslation();
@@ -54,6 +60,7 @@ export const MoveInsight: React.FC<MoveInsightProps> = ({
           {formatEval(evaluation)}
         </span>
       </div>
+      <MoveComment remarks={remarks} isOwnMove={isOwnMove} />
       {evaluation && (
         <EngineLines fen={fen} ply={ply} evaluation={evaluation} />
       )}
