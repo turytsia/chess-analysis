@@ -95,6 +95,7 @@
   --board-light: #ececec;
   --board-dark: #9b9b9b;
   --board-highlight: #e3b92f;
+  --board-move-hint: rgb(0 0 0 / 22%);
 }
 
 .dark {

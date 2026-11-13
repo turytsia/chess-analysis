@@ -32,12 +32,36 @@ describe('material', () => {
       expect(getSacrificedMaterial(moves[4])).toBe(0);
     });
 
+    it('should count a knight given up for two pawns as one point', () => {
+      const { moves } = parsePgn(
+        '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. O-O Nf6 5. d3 d6 6. Bg5 h6 7. Bh4 g5 8. Nxg5 *'
+      );
+
+      expect(getSacrificedMaterial(moves[14])).toBe(1);
+    });
+
+    it('should count a rook given up for a knight and a pawn as one point', () => {
+      const { moves } = parsePgn(
+        '[SetUp "1"]\n[FEN "6k1/5pp1/5n1p/8/8/2Q5/6PP/5RK1 w - - 0 1"]\n\n1. Rxf6 *'
+      );
+
+      expect(getSacrificedMaterial(moves[0])).toBe(1);
+    });
+
     it('should not count an even trade as a sacrifice', () => {
       const { moves } = parsePgn(
         '[SetUp "1"]\n[FEN "3r2k1/3r1ppp/8/8/8/8/3R1PPP/3R2K1 w - - 0 1"]\n\n1. Rxd7 *'
       );
 
-      expect(getSacrificedMaterial(moves[0])).toBeLessThanOrEqual(0);
+      expect(getSacrificedMaterial(moves[0])).toBe(0);
+    });
+
+    it('should not count a trade that only loses a pawn as a sacrifice', () => {
+      const { moves } = parsePgn(
+        '[SetUp "1"]\n[FEN "3r2k1/3r1ppp/8/8/8/2P5/5PPP/3R2K1 w - - 0 1"]\n\n1. Rd4 *'
+      );
+
+      expect(getSacrificedMaterial(moves[0])).toBe(0);
     });
 
     it('should not count material offered by a move that ends the game', () => {

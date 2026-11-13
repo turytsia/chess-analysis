@@ -153,6 +153,30 @@ describe('classify', () => {
     expect(report.assessments[0]?.label).toBe(MoveLabel.Brilliant);
   });
 
+  it.each([
+    { cpAfter: -30, label: MoveLabel.Brilliant },
+    { cpAfter: -90, label: MoveLabel.Great },
+  ])(
+    'should label a sacrifice that leaves the mover at $cpAfter centipawns as $label',
+    ({ cpAfter, label }) => {
+      const report = buildGameReport({
+        moves: BISHOP_SACRIFICE,
+        evals: [
+          {
+            lines: [
+              { cp: cpAfter, depth: 16, pv: ['d3h7'] },
+              { cp: -400, depth: 16, pv: ['g1f1'] },
+            ],
+          },
+          evalOf(cpAfter),
+        ],
+        bookPlies: 0,
+      });
+
+      expect(report.assessments[0]?.label).toBe(label);
+    }
+  );
+
   it('should not label a sacrifice as Brilliant when the game was already won', () => {
     const report = buildGameReport({
       moves: BISHOP_SACRIFICE,

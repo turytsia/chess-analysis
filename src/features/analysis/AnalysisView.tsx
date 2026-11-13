@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 
-import { Board, type SquareHighlight } from '../../components/Board';
+import { Board } from '../../components/Board';
 import { BoardLayout } from '../../components/BoardLayout';
 import { BoardPage } from '../../components/BoardPage';
 import { EvalBar } from '../../components/EvalBar';
@@ -30,7 +30,6 @@ import type { GameLine } from './exploration';
 import { ExplorationPanel } from './ExplorationPanel';
 import { GameHeader } from './GameHeader';
 import { MoveInsight } from './MoveInsight';
-import { getLabelColor } from '../../components/MoveLabelIcon';
 import { MoveList } from './MoveList';
 import { MoveNavigation } from './MoveNavigation';
 import { ReportPanel } from './ReportPanel';
@@ -39,7 +38,6 @@ import { useGameAnalysis } from './useGameAnalysis';
 import { useGameNavigation } from './useGameNavigation';
 
 const BOARD_ID = 'analysis-board';
-const LAST_MOVE_COLOR = 'var(--board-highlight)';
 const PGN_MIME_TYPE = 'application/x-chess-pgn';
 
 interface AnalysisViewProps {
@@ -123,15 +121,6 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
   };
 
   const lastMove = exploredMove ?? gameMove;
-  const highlightColor = assessment
-    ? getLabelColor(assessment.label)
-    : LAST_MOVE_COLOR;
-  const highlights: Array<SquareHighlight> = lastMove
-    ? [
-        { square: lastMove.from, color: highlightColor },
-        { square: lastMove.to, color: highlightColor },
-      ]
-    : [];
 
   return (
     <BoardPage fitsViewport>
@@ -152,7 +141,13 @@ const GameAnalysisScreen: React.FC<GameAnalysisScreenProps> = ({ game }) => {
             fen={fen}
             orientation={orientation}
             arrows={isBestMoveShown ? toBestMoveArrows(evaluation) : []}
-            highlights={highlights}
+            lastMove={
+              lastMove && {
+                from: lastMove.from,
+                to: lastMove.to,
+                label: assessment?.label,
+              }
+            }
             movableColor={getSideToMove(fen)}
             onMove={navigation.playMove}
           />

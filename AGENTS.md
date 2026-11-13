@@ -130,7 +130,16 @@ scripts/                   build-time Node scripts
 - **An engine that cannot start must be visible.** Live evaluation retries once and then shows an
   error instead of an endless "Evaluating…"; a failed game analysis shows a toast.
 - **Move labels.** Thresholds live at the top of `classify.ts`. Brilliant and Great are
-  heuristics; change them together with the tests in `classify.test.ts`.
+  heuristics; change them together with the tests in `classify.test.ts`. Brilliant needs a
+  sacrifice, which is any deficit in pieces, even of one point: a knight for two pawns counts,
+  trading rooks and losing a pawn does not (`getSacrificedMaterial` in `material.ts`).
+- **The board shows the verdict itself.** `Board` takes the move it shows as `lastMove`, tints
+  its two squares and puts the label badge on the corner of the destination square. On the graph
+  Brilliant and Great share one marker on purpose: a separate color for each did not stay
+  distinguishable for color-blind readers.
+- **Pressing a piece shows where it can go.** Dots mark free squares and rings mark captures
+  (`getLegalTargets` in `notation.ts`). The piece is selected on press, not on release; read the
+  comment in `Board.tsx` before changing the click handling.
 - **Opening data.** The book comes from the Lichess `chess-openings` tables. The trainer uses the
   lines with ECO codes B10 to B19.
 - **chess.com API.** Requests run one at a time. Finished months are fetched once and remembered.

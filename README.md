@@ -14,7 +14,8 @@ your device: there is no backend and no account.
 - **Move labels.** Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss and
   Blunder, plus accuracy per side and per game phase.
 - **Analysis view.** Board with keyboard navigation, eval bar, best-move arrow, move list, a
-  clickable graph of winning chances and a list of critical moments.
+  clickable graph of winning chances and a list of critical moments. The label of the move is
+  shown on the board itself, and pressing a piece shows its legal moves.
 - **Explore other moves.** Move the pieces at any point of a game to try a different line. The
   engine evaluates every position you reach and tells you how good your last move was, from Best
   to Blunder. The game's own moves stay untouched, and one click takes you back to them.

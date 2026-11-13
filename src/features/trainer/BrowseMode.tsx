@@ -112,6 +112,13 @@ export const BrowseMode: React.FC<BrowseModeProps> = ({
           fen={fen}
           orientation={TRAINEE_COLOR}
           arrows={toBestMoveArrows(evaluation)}
+          lastMove={
+            shownMove && {
+              from: shownMove.from,
+              to: shownMove.to,
+              label: shownLabel,
+            }
+          }
           movableColor={getSideToMove(fen)}
           onMove={handleMove}
         />

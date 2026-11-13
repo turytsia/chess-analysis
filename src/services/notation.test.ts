@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getLegalTargets,
   getLinePositions,
   getMoveSquares,
   getPieceColor,
@@ -57,6 +58,45 @@ describe('notation', () => {
     it('should return nothing for an empty or unknown square', () => {
       expect(getPieceColor(START, 'e4')).toBeUndefined();
       expect(getPieceColor(START, 'z9')).toBeUndefined();
+    });
+  });
+  describe('getLegalTargets', () => {
+    it('should list the squares a piece can move to', () => {
+      expect(getLegalTargets(START, 'g1')).toEqual([
+        { square: 'f3', isOccupied: false },
+        { square: 'h3', isOccupied: false },
+      ]);
+    });
+
+    it('should mark the squares where a piece is taken', () => {
+      const targets = getLegalTargets(
+        'rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+        'e4'
+      );
+
+      expect(targets).toEqual([
+        { square: 'e5', isOccupied: false },
+        { square: 'd5', isOccupied: true },
+      ]);
+    });
+
+    it('should treat the empty square of an en passant capture as free', () => {
+      const targets = getLegalTargets(
+        'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3',
+        'd4'
+      );
+
+      expect(targets).toContainEqual({ square: 'e3', isOccupied: false });
+    });
+
+    it('should list a promotion square once', () => {
+      expect(getLegalTargets('8/4P1k1/8/8/8/8/8/4K3 w - - 0 1', 'e7')).toEqual([
+        { square: 'e8', isOccupied: false },
+      ]);
+    });
+
+    it('should have no targets for a piece of the side that is not to move', () => {
+      expect(getLegalTargets(START, 'g8')).toEqual([]);
     });
   });
 });

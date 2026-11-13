@@ -9,6 +9,11 @@ interface MoveSquares {
   to: string;
 }
 
+interface LegalTarget {
+  square: string;
+  isOccupied: boolean;
+}
+
 export function toSanLine(
   fen: string,
   uciMoves: Array<string>,
@@ -65,6 +70,25 @@ export function getPieceColor(
     return undefined;
   }
   return piece.color === 'w' ? 'white' : 'black';
+}
+
+export function getLegalTargets(
+  fen: string,
+  square: string
+): Array<LegalTarget> {
+  if (!isSquare(square)) {
+    return [];
+  }
+  const targets = new Chess(fen)
+    .moves({ square, verbose: true })
+    .map((move): [string, LegalTarget] => [
+      move.to,
+      {
+        square: move.to,
+        isOccupied: move.captured !== undefined && !move.isEnPassant(),
+      },
+    ]);
+  return [...new Map(targets).values()];
 }
 
 function isSquare(value: string): value is Square {

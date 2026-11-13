@@ -26,8 +26,8 @@ const THRESHOLDS = {
   greatMinWinAfter: 40,
   greatMaxAlternativeWin: 80,
   brilliantMaxLoss: 2,
-  brilliantMinSacrifice: 2,
-  brilliantMinWinAfter: 50,
+  brilliantMinSacrifice: 1,
+  brilliantMinWinAfter: 45,
   brilliantMaxAlternativeWin: 90,
   missMinOpponentLoss: 10,
   missMinLoss: 10,
@@ -224,9 +224,11 @@ function getLabel(context: MoveContext): MoveLabel {
 }
 
 /*
- * Brilliant: a (near-)best move that offers real material, keeps the mover at
- * least equal, and was needed — if the second-best move also wins comfortably,
- * the sacrifice is only style and does not qualify.
+ * Brilliant: a (near-)best move that gives up a piece for less than it is
+ * worth, keeps the mover about equal or better, and was needed — if the
+ * second-best move also wins comfortably, the sacrifice is only style and does
+ * not qualify. "About equal" leaves room for the small swings between two
+ * searches, so a sound sacrifice in a level position is not lost to noise.
  */
 function isBrilliant({
   move,

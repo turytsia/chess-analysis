@@ -15,6 +15,7 @@ const BACK_RANK_MIN_PIECES = 4;
 const OPENING_MAX_MAJORS_AND_MINORS = 10;
 const ENDGAME_MAX_MAJORS_AND_MINORS = 6;
 const OPENING_MAX_PLY = 30;
+const NO_EXCHANGE: Exchange = { total: 0, pieces: 0 };
 
 export enum GamePhase {
   Opening = 'opening',
@@ -22,11 +23,18 @@ export enum GamePhase {
   Endgame = 'endgame',
 }
 
+interface Exchange {
+  total: number;
+  pieces: number;
+}
+
 /*
- * Net material the mover leaves for the opponent to win, in pawn units. After
- * the move the opponent's best static exchange is found for every mover's
- * piece, and whatever the move itself captured is subtracted, so an even trade
- * comes out as zero and a real sacrifice as a positive number.
+ * Net material the mover gives up, in pawn units. After the move the
+ * opponent's best static exchange is found for every mover's piece, and
+ * whatever the move itself captured is subtracted, so an even trade comes out
+ * as zero and a real sacrifice as a positive number. Only a deficit in pieces
+ * counts: a knight for two pawns is a sacrifice of one point, while trading
+ * rooks and losing a pawn on the way is not a sacrifice at all.
  */
 export function getSacrificedMaterial(move: GameMove): number {
   const chess = new Chess(move.fenAfter);
@@ -35,27 +43,28 @@ export function getSacrificedMaterial(move: GameMove): number {
   }
 
   const moverColor = move.color === 'white' ? 'w' : 'b';
-  const offered = chess
+  const taken: Exchange = {
+    total:
+      (move.captured ? PIECE_VALUES[move.captured] : 0) +
+      (move.promotion ? PIECE_VALUES[move.promotion] - PIECE_VALUES.p : 0),
+    pieces:
+      (move.captured ? getPieceValue(move.captured) : 0) +
+      (move.promotion ? PIECE_VALUES[move.promotion] : 0),
+  };
+  const sacrifices = chess
     .board()
     .flat()
-    .filter(
-      (piece) =>
-        piece !== null &&
-        piece.color === moverColor &&
-        piece.type !== 'p' &&
-        piece.type !== 'k'
+    .flatMap((piece) =>
+      piece !== null &&
+      piece.color === moverColor &&
+      piece.type !== 'p' &&
+      piece.type !== 'k'
+        ? [getExchange(chess, piece.square)]
+        : []
     )
-    .reduce(
-      (most, piece) =>
-        piece ? Math.max(most, getExchangeGain(chess, piece.square)) : most,
-      0
-    );
-
-  const captured = move.captured ? PIECE_VALUES[move.captured] : 0;
-  const promoted = move.promotion
-    ? PIECE_VALUES[move.promotion] - PIECE_VALUES.p
-    : 0;
-  return offered - captured - promoted;
+    .filter(({ pieces }) => pieces > taken.pieces)
+    .map(({ total }) => total - taken.total);
+  return Math.max(0, ...sacrifices);
 }
 
 export function capturesLastMovedPiece(
@@ -102,23 +111,30 @@ function isBackRankSparse(placement: string): boolean {
 /*
  * Static exchange evaluation: the side to move captures on the square with its
  * least valuable piece, the other side recaptures the same way, and either
- * side may stop when continuing would lose material. Legal moves are used, so
- * pins and x-ray attackers are handled by the move generator.
+ * side may stop when continuing would not win material. Legal moves are used,
+ * so pins and x-ray attackers are handled by the move generator. Next to the
+ * total, the part of it that is made of pieces rather than pawns is tracked.
  */
-function getExchangeGain(chess: Chess, square: Square): number {
+function getExchange(chess: Chess, square: Square): Exchange {
   const [capture] = chess
     .moves({ verbose: true })
     .filter((move) => move.to === square && move.captured !== undefined)
     .sort((a, b) => getAttackerValue(a) - getAttackerValue(b));
   if (!capture?.captured) {
-    return 0;
+    return NO_EXCHANGE;
   }
 
   chess.move(capture);
-  const gain =
-    PIECE_VALUES[capture.captured] - getExchangeGain(chess, capture.to);
+  const reply = getExchange(chess, capture.to);
   chess.undo();
-  return Math.max(0, gain);
+  const total = PIECE_VALUES[capture.captured] - reply.total;
+  return total > 0
+    ? { total, pieces: getPieceValue(capture.captured) - reply.pieces }
+    : NO_EXCHANGE;
+}
+
+function getPieceValue(piece: PieceSymbol): number {
+  return piece === 'p' ? 0 : PIECE_VALUES[piece];
 }
 
 function getAttackerValue(move: Move): number {
